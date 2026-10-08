@@ -59,6 +59,15 @@ service worker registers normally there.
 That last row is the one people forget. If you change the app and your phone
 still shows the old version, you didn't bump the cache name.
 
+## Changes in v5
+
+- **Fixed: the time dropdowns were unusable on a phone.** Date and time shared
+  one flex row, so the three time selects split half the screen between them.
+  After padding and the native dropdown arrow there was no room left for the
+  digits — all three rendered as a bare arrow. Date and time now each get a
+  full-width row, and the selects carry `min-width:0` so a flex child shrinks
+  instead of clipping its own text. Verified at 412px wide: 121px per select.
+
 ## Changes in v4
 
 - **Searchable client picker in the booking form.** The dropdown is replaced by

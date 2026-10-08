@@ -148,8 +148,11 @@ button{background:none;border:none;cursor:pointer}
 
 /* ---------- time dropdowns ---------- */
 .timewrap{display:flex;gap:8px}
+/* min-width:0 lets a flex child shrink below its content width instead of
+   overflowing; without it a narrow select clips its own text. */
 .timewrap select{
-  flex:1;padding:12px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface)
+  flex:1;min-width:0;padding:12px 8px;text-align:center;
+  border:1px solid var(--line);border-radius:10px;background:var(--surface)
 }
 .timewrap select:focus{outline:2px solid var(--primary);outline-offset:1px;border-color:transparent}
 
@@ -893,25 +896,23 @@ function resSheet(id){
       <input id="rSearch" placeholder="${t("searchOrPick")}" ${r ? "hidden" : ""} autocomplete="off">
       <div id="rResults" class="results"></div>
     </div>
-    <div class="row">
-      <div class="field"><label for="rDate">${t("date")}</label>
-        <input id="rDate" type="date" class="tnum" value="${toDateInput(d)}"></div>
-      <div class="field"><label for="rHour">${t("time")}</label>
-        <div class="timewrap">
-          <select id="rHour" class="tnum" aria-label="${t("hourL")}">
-            ${Array.from({length:12},(_,i)=>i+1).map(h =>
-              `<option value="${h}" ${h===h12?"selected":""}>${h}</option>`).join("")}
-          </select>
-          <select id="rMin" class="tnum" aria-label="${t("minuteL")}">
-            ${minOpts.map(m =>
-              `<option value="${m}" ${m===mins?"selected":""}>${String(m).padStart(2,"0")}</option>`).join("")}
-          </select>
-          <select id="rAP" aria-label="${t("ampmL")}">
-            <option value="am" ${!isPM?"selected":""}>${t("am")}</option>
-            <option value="pm" ${isPM?"selected":""}>${t("pm")}</option>
-          </select>
-        </div></div>
-    </div>
+    <div class="field"><label for="rDate">${t("date")}</label>
+      <input id="rDate" type="date" class="tnum" value="${toDateInput(d)}"></div>
+    <div class="field"><label for="rHour">${t("time")}</label>
+      <div class="timewrap">
+        <select id="rHour" class="tnum" aria-label="${t("hourL")}">
+          ${Array.from({length:12},(_,i)=>i+1).map(h =>
+            `<option value="${h}" ${h===h12?"selected":""}>${h}</option>`).join("")}
+        </select>
+        <select id="rMin" class="tnum" aria-label="${t("minuteL")}">
+          ${minOpts.map(m =>
+            `<option value="${m}" ${m===mins?"selected":""}>${String(m).padStart(2,"0")}</option>`).join("")}
+        </select>
+        <select id="rAP" aria-label="${t("ampmL")}">
+          <option value="am" ${!isPM?"selected":""}>${t("am")}</option>
+          <option value="pm" ${isPM?"selected":""}>${t("pm")}</option>
+        </select>
+      </div></div>
     <div class="row">
       <div class="field"><label for="rDur">${t("duration")}</label>
         <input id="rDur" type="number" min="5" step="5" class="tnum" value="${r ? r.duration : 60}"></div>
