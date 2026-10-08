@@ -1,0 +1,157 @@
+# Reservations — installable web app (PWA)
+
+A single-user reservation book. Clients and bookings are stored on the phone
+itself using IndexedDB. No server, no account, no internet needed after the
+first load.
+
+## Files
+
+| File | What it does |
+|---|---|
+| `index.html` | The whole app — markup, styles, and logic in one file |
+| `manifest.json` | Makes it installable, sets the icon and colours |
+| `sw.js` | Service worker — caches the app so it opens offline |
+| `icon-192.png`, `icon-512.png`, `icon-512-maskable.png` | Home-screen icons |
+
+## Putting it on your phone
+
+The service worker and "Add to Home Screen" only work over **HTTPS**. Opening
+`index.html` by double-clicking it will not install. Pick any static host:
+
+- **GitHub Pages** — push these files to a repo, Settings → Pages → deploy from
+  `main` branch, root folder. Free, HTTPS included.
+- **Netlify Drop** — drag the folder onto netlify.com/drop. No account needed
+  for a test.
+- **Your own hosting** — upload the folder to any directory. Nothing to install
+  on the server; these are static files.
+
+### Install
+
+- **Android (Chrome)** — open the URL, menu ⋮ → *Add to Home screen* → *Install*.
+- **iPhone (Safari only)** — open the URL, Share button → *Add to Home Screen*.
+  Chrome on iOS cannot install it; use Safari.
+
+On iPhone, installing to the home screen is not optional. Safari deletes stored
+site data after about seven days without a visit. Installed apps are exempt from
+that rule. Do not skip this step.
+
+## Local testing
+
+```bash
+cd this-folder
+python3 -m http.server 8080
+```
+
+Then open `http://localhost:8080`. `localhost` counts as a secure origin, so the
+service worker registers normally there.
+
+## Things you will want to change
+
+| What | Where |
+|---|---|
+| Default country code | `COUNTRIES` array in `index.html` — first entry is the default |
+| Add or remove countries | Same array, format `["+966","🇸🇦"]` |
+| Default booking length | `value="${r ? r.duration : 60}"` in `resSheet` |
+| Colours | The `:root` block at the top of the `<style>` section |
+| Any wording, either language | The `T` object — `T.en` and `T.ar` |
+| Cache version after an edit | `const CACHE = "reservations-v1"` in `sw.js` — bump it, or phones keep serving the old copy |
+
+That last row is the one people forget. If you change the app and your phone
+still shows the old version, you didn't bump the cache name.
+
+## Changes in v4
+
+- **Searchable client picker in the booking form.** The dropdown is replaced by
+  a type-to-filter box matching name or phone digits, showing both on each row.
+  Picking a client collapses it to a single confirmed row.
+- **Phone search matches any format.** Both sides are reduced to digits with a
+  leading zero dropped, so `0501234567`, `501234567`, `+966501234567` and
+  `966 50 123 4567` all find the same client. Applies to the clients tab and the
+  booking picker.
+- **Phone is required** when saving a client, and still format-validated.
+- **Phone is unique.** A duplicate blocks the save, names the client who already
+  holds that number, and offers a button to open that record.
+- **Location links show their address.** A Google Maps link is decoded to the
+  address inside it rather than printed raw. Short `maps.app.goo.gl` links carry
+  no readable text and resolve server-side, so those show "Shared location"
+  instead. Every subtitle is clamped to one line regardless.
+- **`updatedAt` on every record.** Invisible today; it is what last-write-wins
+  sync would need, and adding it now avoids migrating existing data later.
+
+### Known limitation
+
+Adding a new client from inside the booking form still discards the reservation
+you were typing. Add the client first, then book.
+
+## Changes in v3
+
+- **Upcoming tab** — every future reservation in one scrolling list, grouped
+  Today / Tomorrow / This week / Later. Tap a row to edit it; the green button
+  goes straight to WhatsApp. The day view is still there for working one day.
+- **Day header** — weekday name, a "today" badge when it applies, the Gregorian
+  date, and the Umm al-Qura Hijri date. If a browser does not resolve the
+  `islamic-umalqura` calendar, the Hijri part is hidden rather than shown from a
+  different Hijri variant that could be a day off.
+- **Time entry** — hour, minute (00/15/30/45) and AM/PM as three dropdowns, so
+  12-hour format is guaranteed on every device instead of following the phone's
+  locale. A reservation saved on an off-interval minute (10:20) keeps that
+  minute as an extra option, so editing it never moves the time.
+- **Location links** — a location that is a full `http://` or `https://` URL now
+  opens directly; typed text still goes to Google as a search. Nothing else is
+  ever used as a link.
+- **Clearer date error** — names the missing date instead of a generic message.
+- **Desktop layout** — content capped at 480px and centred above 600px wide.
+
+To change the minute interval, edit the `[0,15,30,45]` arrays in `resSheet`.
+
+## What it does
+
+- One day per screen, bookings pinned to a time rail, arrows to move between days
+- Upcoming tab listing everything ahead, grouped by how soon it is
+- Tap the date to jump back to today
+- Clients: name, phone, location, notes — searchable by name or number
+- Phone numbers are normalised to international format on save, because
+  `wa.me` links fail silently on badly formatted numbers
+- WhatsApp, call, and map links on every booking
+- Overlap detection — warns before saving a clashing booking, and flags existing
+  clashes on the day view
+- Statuses: upcoming, done, cancelled, no-show
+- Full English/Arabic switch including right-to-left layout
+- Export to a JSON file, restore by merging a file back in
+
+## What it does not do, and why
+
+- **No reminder notifications.** Reliable web push needs a push server and a
+  VAPID key pair, and on iOS it only works for an installed app on 16.4+. Not
+  worth it for v1 when you said reminders were nice-to-have.
+- **No sync between devices.** Single-device by design. Two phones means a
+  backend, accounts, and conflict resolution — a different project.
+- **No recurring bookings.** Each reservation is a separate record.
+- **Adding a new client from inside the reservation form discards the
+  reservation you were typing.** The form is replaced, not stacked. Add the
+  client first, then book. Fixing this properly needs a sheet stack.
+
+## Storage protection (Backup tab)
+
+On load the app calls `navigator.storage.persist()`, asking the browser to mark
+its data as persistent so it is not cleared to reclaim space. The Backup tab
+reports the real answer rather than assuming one:
+
+- **Granted** — Chrome usually grants this to an installed app.
+- **Not granted** — Safari usually refuses. The card turns amber.
+- **Unknown** — the browser does not implement the Storage API.
+
+On iPhone, if you are in a Safari tab rather than the installed app, the Backup
+tab shows an amber card telling you to install it. That warning is accurate, not
+decorative: Safari deletes IndexedDB, localStorage and service worker
+registrations after 7 days without a visit, and only home-screen web apps are
+exempt from that rule.
+
+The export card also tracks when you last exported and turns amber after 7 days.
+
+## The risk you are accepting
+
+Browser storage is not permanent storage. Clearing site data, "Clear browsing
+data", or deleting the installed app removes everything with no recovery. The
+export button exists for exactly this reason. Use it weekly and keep the file
+somewhere that isn't the phone.

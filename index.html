@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16212B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Reservations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#16212B; --ink-soft:#5A6672; --line:#E2E6EA;
+  --paper:#F7F8FA; --surface:#FFFFFF;
+  --primary:#0F6B5C; --primary-soft:#E6F1EE;
+  --warn:#C98A12; --warn-soft:#FBF2DE;
+  --danger:#B3261E; --danger-soft:#FBE9E7;
+  --rail:104px;
+  --font:"IBM Plex Sans Arabic",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --sheet-ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{
+  font-family:var(--font); background:var(--paper); color:var(--ink);
+  font-size:16px; line-height:1.45;
+  padding-bottom:calc(72px + env(safe-area-inset-bottom));
+  overscroll-behavior-y:none;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:none;cursor:pointer}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ---------- top bar ---------- */
+.topbar{
+  position:sticky; top:0; z-index:20; background:var(--ink); color:#fff;
+  padding:calc(12px + env(safe-area-inset-top)) 16px 14px;
+}
+.daynav{display:flex;align-items:center;gap:8px}
+.daynav h1{font-size:1.4rem;font-weight:600;letter-spacing:-.01em;flex:1;min-width:0}
+.daynav h1 span{display:block;font-size:.8rem;font-weight:400;opacity:.65;letter-spacing:0}
+.iconbtn{
+  width:40px;height:40px;border-radius:10px;display:grid;place-items:center;
+  color:#fff;background:rgba(255,255,255,.09);flex:none;font-size:1.1rem
+}
+.iconbtn:active{background:rgba(255,255,255,.2)}
+.topbar .meta{display:flex;gap:14px;margin-top:10px;font-size:.8rem;opacity:.7}
+.lang{font-size:.85rem;font-weight:600;padding:0 12px;width:auto}
+
+/* ---------- day rail ---------- */
+.rail{padding:8px 0 24px}
+.slot{display:flex;align-items:stretch;position:relative}
+.slot .time{
+  width:var(--rail); flex:none; padding:16px 12px 16px 16px; text-align:end;
+  font-size:1.05rem;font-weight:600;
+}
+.slot .time small{display:block;font-size:.72rem;font-weight:400;color:var(--ink-soft)}
+.slot .body{
+  flex:1;min-width:0;border-inline-start:2px solid var(--line);
+  padding:16px 16px 16px 18px;position:relative;
+}
+.slot .body::before{
+  content:"";position:absolute;inset-inline-start:-6px;top:22px;
+  width:10px;height:10px;border-radius:50%;background:var(--primary);
+  border:2px solid var(--paper);
+}
+.slot.done .body::before{background:var(--ink-soft)}
+.slot.cancelled .body::before,.slot.noshow .body::before{background:var(--danger)}
+.slot.cancelled .name{text-decoration:line-through;color:var(--ink-soft)}
+.slot .name{font-size:1.05rem;font-weight:600}
+/* One line, always. No pasted value can break the row layout. */
+.slot .sub{
+  font-size:.85rem;color:var(--ink-soft);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.slot .sub .where{display:inline-block}
+.actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.chip{
+  border:1px solid var(--line);background:var(--surface);border-radius:999px;
+  padding:7px 14px;font-size:.85rem;font-weight:500;display:inline-flex;gap:6px;align-items:center;
+  text-decoration:none;color:var(--ink)
+}
+.chip:active{background:var(--paper)}
+.chip.wa{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
+.badge{
+  font-size:.7rem;font-weight:600;padding:2px 8px;border-radius:999px;
+  background:var(--primary-soft);color:var(--primary);margin-inline-start:8px;vertical-align:1px
+}
+.badge.done{background:#EEF0F2;color:var(--ink-soft)}
+.badge.cancelled,.badge.noshow{background:var(--danger-soft);color:var(--danger)}
+.clash{
+  margin:2px 16px 0;padding:8px 12px;border-radius:8px;
+  background:var(--warn-soft);color:#7A5304;font-size:.8rem;font-weight:500
+}
+
+/* ---------- today badge ---------- */
+#dayTitle em{
+  font-style:normal;font-size:.68rem;font-weight:600;letter-spacing:.02em;
+  background:rgba(255,255,255,.16);padding:3px 9px;border-radius:999px;
+  margin-inline-start:8px;vertical-align:3px
+}
+
+/* ---------- agenda ---------- */
+.agenda{padding:4px 0 24px}
+.bucket{
+  font-size:.78rem;font-weight:600;color:var(--ink-soft);
+  padding:18px 16px 6px;letter-spacing:.02em
+}
+.aday{
+  display:flex;align-items:baseline;gap:8px;padding:8px 16px 4px;
+  border-top:1px solid var(--line)
+}
+.aday b{font-size:.95rem;font-weight:600}
+.aday span{font-size:.78rem;color:var(--ink-soft)}
+.arow{
+  display:flex;align-items:center;gap:12px;padding:12px 16px;
+  background:var(--surface);border-bottom:1px solid var(--line)
+}
+.arow:active{background:var(--paper)}
+.arow .atime{width:84px;flex:none;font-weight:600;font-size:.95rem}
+.arow .awho{flex:1;min-width:0}
+.arow .awho b{font-weight:600;display:block}
+.arow .awho span{font-size:.82rem;color:var(--ink-soft)}
+
+/* ---------- client picker ---------- */
+.picked{
+  display:flex;align-items:center;gap:10px;padding:11px 13px;
+  border:1px solid var(--primary);background:var(--primary-soft);border-radius:10px
+}
+.picked b{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.picked span{font-size:.82rem;color:var(--ink-soft)}
+.results{margin-top:8px;max-height:238px;overflow-y:auto}
+.hit{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:start;
+  padding:11px 13px;border:1px solid var(--line);border-radius:10px;
+  background:var(--surface);margin-bottom:6px
+}
+.hit:active{background:var(--paper)}
+.hit b{font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hit span{font-size:.82rem;color:var(--ink-soft)}
+.hit.addnew{justify-content:center;color:var(--primary);border-style:dashed;font-weight:500}
+.nohit{padding:12px 4px;font-size:.85rem;color:var(--ink-soft)}
+
+/* ---------- time dropdowns ---------- */
+.timewrap{display:flex;gap:8px}
+.timewrap select{
+  flex:1;padding:12px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface)
+}
+.timewrap select:focus{outline:2px solid var(--primary);outline-offset:1px;border-color:transparent}
+
+/* ---------- generic ---------- */
+.empty{padding:56px 28px;text-align:center;color:var(--ink-soft)}
+.empty strong{display:block;color:var(--ink);font-size:1.05rem;margin-bottom:6px;font-weight:600}
+.page{padding:16px}
+.page h2{font-size:1.15rem;font-weight:600;margin-bottom:4px}
+.page .hint{font-size:.85rem;color:var(--ink-soft);margin-bottom:16px;max-width:60ch}
+.search{
+  width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;
+  background:var(--surface);margin-bottom:12px
+}
+.clientrow{
+  display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)
+}
+.clientrow .who{flex:1;min-width:0}
+.clientrow .who b{font-weight:600;display:block}
+.clientrow .who span{font-size:.82rem;color:var(--ink-soft)}
+.mini{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);flex:none}
+.mini.wa{border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+.card.risk{border-color:var(--warn);background:var(--warn-soft)}
+.card.risk h3{color:#7A5304}
+.card.risk p{color:#7A5304}
+.card h3{font-size:.95rem;font-weight:600;margin-bottom:6px}
+.card p{font-size:.85rem;color:var(--ink-soft);margin-bottom:12px}
+.btn{
+  width:100%;padding:13px;border-radius:10px;background:var(--primary);color:#fff;
+  font-weight:600;font-size:.95rem
+}
+.btn.ghost{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+.btn.danger{background:var(--danger-soft);color:var(--danger)}
+.btn:active{filter:brightness(.94)}
+.btn+.btn{margin-top:8px}
+
+/* ---------- bottom nav + fab ---------- */
+nav{
+  position:fixed;bottom:0;inset-inline:0;z-index:30;display:flex;
+  background:var(--surface);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom)
+}
+nav button{flex:1;padding:10px 4px 12px;font-size:.7rem;color:var(--ink-soft);font-weight:500}
+nav button b{display:block;font-size:1.25rem;font-weight:400;line-height:1.2}
+nav button[aria-current="page"]{color:var(--primary);font-weight:600}
+.fab{
+  position:fixed;inset-inline-end:18px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:31;
+  width:58px;height:58px;border-radius:18px;background:var(--ink);color:#fff;
+  font-size:1.8rem;display:grid;place-items:center;box-shadow:0 6px 18px rgba(22,33,43,.28)
+}
+
+/* ---------- sheet ---------- */
+.scrim{position:fixed;inset:0;background:rgba(22,33,43,.45);z-index:40;opacity:0;pointer-events:none;transition:opacity .22s}
+.scrim.open{opacity:1;pointer-events:auto}
+.sheet{
+  position:fixed;inset-inline:0;bottom:0;z-index:41;background:var(--surface);
+  border-radius:18px 18px 0 0;max-height:92vh;overflow-y:auto;
+  transform:translateY(102%);transition:transform .3s var(--sheet-ease);
+  padding:8px 16px calc(24px + env(safe-area-inset-bottom));
+}
+.sheet.open{transform:translateY(0)}
+.grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:6px auto 14px}
+.sheet h2{font-size:1.15rem;font-weight:600;margin-bottom:16px}
+label{display:block;font-size:.8rem;font-weight:600;color:var(--ink-soft);margin:0 0 6px}
+.field{margin-bottom:14px}
+.field input,.field select,.field textarea{
+  width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:10px;background:var(--surface)
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--primary);outline-offset:1px;border-color:transparent}
+.field textarea{min-height:70px;resize:vertical}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+.phonewrap{display:flex;gap:8px}
+.phonewrap select{flex:none;width:112px}
+.err{color:var(--danger);font-size:.8rem;margin-top:6px;font-weight:500}
+.warnbox{background:var(--warn-soft);color:#7A5304;padding:11px 13px;border-radius:10px;font-size:.85rem;margin-bottom:14px;font-weight:500}
+.toast{
+  position:fixed;bottom:calc(96px + env(safe-area-inset-bottom));inset-inline:24px;z-index:60;
+  background:var(--ink);color:#fff;padding:12px 16px;border-radius:10px;font-size:.88rem;
+  text-align:center;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none
+}
+.toast.show{opacity:1;transform:translateY(0)}
+.notice{background:var(--warn-soft);color:#7A5304;padding:10px 16px;font-size:.82rem;font-weight:500}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- desktop: cap the column and centre it ----------
+   Logical inset-inline keeps the fixed elements aligned to the column in both
+   LTR and RTL without a mirrored stylesheet. */
+@media (min-width:600px){
+  body{max-width:480px;margin:0 auto;border-inline:1px solid var(--line);min-height:100vh}
+  nav{inset-inline:calc(50% - 240px)}
+  .sheet{inset-inline:calc(50% - 240px)}
+  .fab{inset-inline-end:calc(50% - 240px + 18px)}
+  .toast{inset-inline:calc(50% - 240px + 24px)}
+}
+</style>
+</head>
+<body>
+
+<div id="storagenotice" class="notice" hidden></div>
+
+<header class="topbar">
+  <div class="daynav">
+    <button class="iconbtn" id="prevDay" aria-label="Previous day">‹</button>
+    <h1 id="dayTitle"><span id="dayName">—</span><em id="todayTag" hidden></em><span id="daySub"></span></h1>
+    <button class="iconbtn" id="nextDay" aria-label="Next day">›</button>
+    <button class="iconbtn lang" id="langBtn">ع</button>
+  </div>
+  <div class="meta" id="dayMeta"></div>
+</header>
+
+<main id="main"></main>
+
+<button class="fab" id="fab" aria-label="New reservation">+</button>
+
+<nav>
+  <button data-view="day" aria-current="page"><b>▤</b><span data-t="navDay">Day</span></button>
+  <button data-view="upcoming"><b>↻</b><span data-t="navUpcoming">Upcoming</span></button>
+  <button data-view="clients"><b>☰</b><span data-t="navClients">Clients</span></button>
+  <button data-view="backup"><b>⤓</b><span data-t="navBackup">Backup</span></button>
+</nav>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet"><div class="grab"></div><div id="sheetBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   1. LANGUAGE
+   ============================================================ */
+const T = {
+  en:{
+    navDay:"Day", navUpcoming:"Upcoming", navClients:"Clients", navBackup:"Backup",
+    todayBadge:"Today",
+    groupToday:"Today", groupTomorrow:"Tomorrow", groupWeek:"This week", groupLater:"Later",
+    upcomingTitle:"Upcoming",
+    emptyUpcomingTitle:"Nothing booked ahead",
+    emptyUpcomingBody:"Reservations from now on will appear here.",
+    am:"AM", pm:"PM", hourL:"Hour", minuteL:"Minute", ampmL:"AM or PM",
+    errDateOnly:"Choose a date.",
+    today:"Today", tomorrow:"Tomorrow", yesterday:"Yesterday",
+    booked:"{n} booked", doneN:"{n} done", freeDay:"Nothing booked",
+    emptyDayTitle:"No reservations this day",
+    emptyDayBody:"Tap + to book a client.",
+    emptyClientsTitle:"No clients yet",
+    emptyClientsBody:"Add a client and they'll show up here.",
+    whatsapp:"WhatsApp", call:"Call", edit:"Edit", map:"Map",
+    newRes:"New reservation", editRes:"Edit reservation",
+    newClient:"New client", editClient:"Edit client",
+    client:"Client", pickClient:"Choose a client", addNewClient:"+ Add a new client",
+    name:"Name", phone:"Phone number", location:"Location", notes:"Notes",
+    date:"Date", time:"Time", duration:"Duration (minutes)", service:"Service",
+    status:"Status", upcoming:"Upcoming", done:"Done", cancelled:"Cancelled", noshow:"No-show",
+    save:"Save", saveRes:"Save reservation", saveClient:"Save client",
+    del:"Delete", cancel:"Cancel",
+    searchClients:"Search by name or phone",
+    clash:"Overlaps {name} at {time}",
+    clashWarn:"This overlaps an existing booking: {name} at {time}. Save anyway?",
+    errName:"Enter a name.",
+    errPhone:"Enter a valid phone number.",
+    errPhoneRequired:"A phone number is required.",
+    errPhoneTaken:"This number already belongs to {name}.",
+    openExisting:"Open {name}",
+    locationLink:"Shared location",
+    searchOrPick:"Search by name or number",
+    noMatch:"No client matches that.",
+    errClient:"Choose a client first.",
+    errDate:"Choose a date and time.",
+    savedRes:"Reservation saved", savedClient:"Client saved",
+    deletedRes:"Reservation deleted", deletedClient:"Client deleted",
+    confirmDelClient:"Delete this client and all {n} of their reservations?",
+    confirmDelRes:"Delete this reservation?",
+    clientsTitle:"Clients", clientsHint:"Tap a name to edit. The green button opens WhatsApp.",
+    resCount:"{n} upcoming",
+    backupTitle:"Backup", backupHint:"Your data lives only on this phone. If you clear your browser data or reinstall, it is gone. Export a copy regularly.",
+    exportH:"Export a copy", exportP:"Saves every client and reservation to one file.",
+    exportBtn:"Export data file",
+    importH:"Restore from a file", importP:"Merges the file into what is already here. Nothing is overwritten unless the IDs match.",
+    importBtn:"Choose a backup file",
+    statsH:"Stored right now", resetH:"Start over", resetP:"Erases everything on this device. Export first.",
+    resetBtn:"Erase all data", confirmReset:"Erase all clients and reservations? This cannot be undone.",
+    imported:"Restored {c} clients and {r} reservations",
+    importBad:"That file isn't a valid backup.",
+    exported:"Backup file saved",
+    erased:"All data erased",
+    nClients:"{n} clients", nRes:"{n} reservations",
+    memoryWarn:"Storage is blocked here, so nothing will be saved. Open the app from your own server or home screen.",
+    noPhone:"No phone number",
+    dur:"{n} min",
+    protectH:"Storage protection",
+    protectYes:"Granted. The browser has marked this data as persistent and will not clear it to free up space.",
+    protectNo:"Not granted. The browser may clear this data on its own. Keep the app on your home screen and export often.",
+    protectUnknown:"Unknown. This browser does not report storage protection.",
+    homescreenH:"Add to home screen",
+    homescreenIOS:"You are running in a browser tab. On iPhone, Safari erases this app's data after 7 days without a visit. Share → Add to Home Screen stops that. Do it now.",
+    homescreenOK:"Running from the home screen. This is where your data is safest.",
+    lastBackup:"Last export: {d}",
+    neverBackup:"Never exported",
+    nagStale:"No backup for {n} days. Export one now.",
+    nagNever:"You have never exported a backup."
+  },
+  ar:{
+    navDay:"اليوم", navUpcoming:"القادم", navClients:"العملاء", navBackup:"النسخ الاحتياطي",
+    todayBadge:"اليوم",
+    groupToday:"اليوم", groupTomorrow:"غدًا", groupWeek:"هذا الأسبوع", groupLater:"لاحقًا",
+    upcomingTitle:"الحجوزات القادمة",
+    emptyUpcomingTitle:"لا توجد حجوزات قادمة",
+    emptyUpcomingBody:"ستظهر هنا الحجوزات من الآن فصاعدًا.",
+    am:"ص", pm:"م", hourL:"الساعة", minuteL:"الدقيقة", ampmL:"صباحًا أو مساءً",
+    errDateOnly:"اختر التاريخ.",
+    today:"اليوم", tomorrow:"غدًا", yesterday:"أمس",
+    booked:"{n} حجز", doneN:"{n} منتهي", freeDay:"لا يوجد حجز",
+    emptyDayTitle:"لا توجد حجوزات في هذا اليوم",
+    emptyDayBody:"اضغط + لحجز موعد لعميل.",
+    emptyClientsTitle:"لا يوجد عملاء بعد",
+    emptyClientsBody:"أضف عميلاً وسيظهر هنا.",
+    whatsapp:"واتساب", call:"اتصال", edit:"تعديل", map:"الموقع",
+    newRes:"حجز جديد", editRes:"تعديل الحجز",
+    newClient:"عميل جديد", editClient:"تعديل العميل",
+    client:"العميل", pickClient:"اختر عميلاً", addNewClient:"+ إضافة عميل جديد",
+    name:"الاسم", phone:"رقم الجوال", location:"الموقع", notes:"ملاحظات",
+    date:"التاريخ", time:"الوقت", duration:"المدة (بالدقائق)", service:"الخدمة",
+    status:"الحالة", upcoming:"قادم", done:"منتهي", cancelled:"ملغي", noshow:"لم يحضر",
+    save:"حفظ", saveRes:"حفظ الحجز", saveClient:"حفظ العميل",
+    del:"حذف", cancel:"إلغاء",
+    searchClients:"ابحث بالاسم أو رقم الجوال",
+    clash:"يتعارض مع {name} الساعة {time}",
+    clashWarn:"هذا الموعد يتعارض مع حجز قائم: {name} الساعة {time}. هل تريد الحفظ على أي حال؟",
+    errName:"أدخل الاسم.",
+    errPhone:"أدخل رقم جوال صحيح.",
+    errPhoneRequired:"رقم الجوال مطلوب.",
+    errPhoneTaken:"هذا الرقم مسجّل باسم {name}.",
+    openExisting:"فتح {name}",
+    locationLink:"موقع مشترك",
+    searchOrPick:"ابحث بالاسم أو الرقم",
+    noMatch:"لا يوجد عميل مطابق.",
+    errClient:"اختر عميلاً أولاً.",
+    errDate:"اختر التاريخ والوقت.",
+    savedRes:"تم حفظ الحجز", savedClient:"تم حفظ العميل",
+    deletedRes:"تم حذف الحجز", deletedClient:"تم حذف العميل",
+    confirmDelClient:"حذف هذا العميل وجميع حجوزاته البالغة {n}؟",
+    confirmDelRes:"حذف هذا الحجز؟",
+    clientsTitle:"العملاء", clientsHint:"اضغط على الاسم للتعديل. الزر الأخضر يفتح واتساب.",
+    resCount:"{n} حجز قادم",
+    backupTitle:"النسخ الاحتياطي", backupHint:"بياناتك محفوظة على هذا الجهاز فقط. إذا مسحت بيانات المتصفح أو أعدت التثبيت ستفقدها. صدّر نسخة بشكل منتظم.",
+    exportH:"تصدير نسخة", exportP:"يحفظ جميع العملاء والحجوزات في ملف واحد.",
+    exportBtn:"تصدير ملف البيانات",
+    importH:"استعادة من ملف", importP:"يدمج الملف مع البيانات الحالية دون حذفها.",
+    importBtn:"اختر ملف النسخة الاحتياطية",
+    statsH:"المحفوظ حاليًا", resetH:"البدء من جديد", resetP:"يمسح كل شيء على هذا الجهاز. صدّر نسخة أولاً.",
+    resetBtn:"مسح كل البيانات", confirmReset:"مسح جميع العملاء والحجوزات؟ لا يمكن التراجع.",
+    imported:"تمت استعادة {c} عميل و {r} حجز",
+    importBad:"هذا الملف غير صالح.",
+    exported:"تم حفظ ملف النسخة الاحتياطية",
+    erased:"تم مسح جميع البيانات",
+    nClients:"{n} عميل", nRes:"{n} حجز",
+    memoryWarn:"التخزين محظور هنا، لن يتم حفظ أي شيء. افتح التطبيق من خادمك أو من الشاشة الرئيسية.",
+    noPhone:"لا يوجد رقم",
+    dur:"{n} دقيقة",
+    protectH:"حماية التخزين",
+    protectYes:"مفعّلة. المتصفح حدّد هذه البيانات كدائمة ولن يمسحها لتوفير مساحة.",
+    protectNo:"غير مفعّلة. قد يمسح المتصفح البيانات من تلقاء نفسه. أبقِ التطبيق على الشاشة الرئيسية وصدّر نسخة بانتظام.",
+    protectUnknown:"غير معروف. هذا المتصفح لا يوفر معلومات عن حماية التخزين.",
+    homescreenH:"الإضافة إلى الشاشة الرئيسية",
+    homescreenIOS:"أنت تستخدم التطبيق داخل المتصفح. على الآيفون يمسح سفاري بيانات التطبيق بعد ٧ أيام دون زيارة. استخدم مشاركة ← إضافة إلى الشاشة الرئيسية الآن.",
+    homescreenOK:"يعمل من الشاشة الرئيسية. بياناتك في أأمن وضع.",
+    lastBackup:"آخر تصدير: {d}",
+    neverBackup:"لم يتم التصدير أبدًا",
+    nagStale:"لم تصدّر نسخة منذ {n} يومًا. صدّر نسخة الآن.",
+    nagNever:"لم تصدّر أي نسخة احتياطية بعد."
+  }
+};
+let lang = "en";
+const t = (k, vars) => {
+  let s = (T[lang] && T[lang][k]) || T.en[k] || k;
+  if (vars) for (const p in vars) s = s.replace("{"+p+"}", vars[p]);
+  return s;
+};
+const locale = () => lang === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-GB";
+
+/* ============================================================
+   2. STORAGE  (IndexedDB, with an in-memory fallback)
+   ============================================================ */
+const DB_NAME = "reservations-db", DB_VER = 1;
+let db = null, memoryOnly = false;
+
+function openDB(){
+  return new Promise(resolve => {
+    let req;
+    try { req = indexedDB.open(DB_NAME, DB_VER); }
+    catch(e){ memoryOnly = true; return resolve(); }
+    req.onupgradeneeded = () => {
+      const d = req.result;
+      if(!d.objectStoreNames.contains("clients")) d.createObjectStore("clients",{keyPath:"id"});
+      if(!d.objectStoreNames.contains("reservations")) d.createObjectStore("reservations",{keyPath:"id"});
+      if(!d.objectStoreNames.contains("prefs")) d.createObjectStore("prefs",{keyPath:"k"});
+    };
+    req.onsuccess = () => { db = req.result; resolve(); };
+    req.onerror = () => { memoryOnly = true; resolve(); };
+    req.onblocked = () => { memoryOnly = true; resolve(); };
+    setTimeout(() => { if(!db){ memoryOnly = true; resolve(); } }, 2500);
+  });
+}
+function tx(store, mode, fn){
+  return new Promise((resolve, reject) => {
+    if(!db) return resolve();
+    const tr = db.transaction(store, mode);
+    const rq = fn(tr.objectStore(store));
+    tr.oncomplete = () => resolve(rq && rq.result);
+    tr.onerror = () => reject(tr.error);
+  });
+}
+const dbAll  = s      => tx(s,"readonly",  st => st.getAll());
+const dbPut  = (s,v)  => tx(s,"readwrite", st => st.put(v));
+const dbDel  = (s,id) => tx(s,"readwrite", st => st.delete(id));
+const dbWipe = s      => tx(s,"readwrite", st => st.clear());
+
+/* ============================================================
+   3. STATE
+   ============================================================ */
+let clients = [], reservations = [];
+let persistState = "unknown", lastBackupAt = 0;
+const isStandalone = () =>
+  window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () =>
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+/* Ask the browser to mark this data persistent. Chrome grants it for installed
+   apps; Safari usually refuses. Either way the answer is shown in Backup, so the
+   user knows which protection they actually have rather than assuming. */
+/* Days since the last export, or null if there has never been one. */
+function backupAge(){
+  if(!lastBackupAt) return null;
+  return Math.floor((Date.now() - lastBackupAt) / 86400000);
+}
+
+async function requestPersistence(){
+  try{
+    if(!navigator.storage || !navigator.storage.persist) return "unknown";
+    if(await navigator.storage.persisted()) return "yes";
+    return (await navigator.storage.persist()) ? "yes" : "no";
+  }catch(e){ return "unknown"; }
+}
+let view = "day";
+let cursor = startOfDay(new Date());
+let clientQuery = "";
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+function startOfDay(d){ const x = new Date(d); x.setHours(0,0,0,0); return x; }
+function sameDay(ts, d){ const a = new Date(ts); return a.getFullYear()===d.getFullYear() && a.getMonth()===d.getMonth() && a.getDate()===d.getDate(); }
+const byId = id => clients.find(c => c.id === id);
+
+/* ============================================================
+   4. PHONE + LINKS
+   ============================================================ */
+const COUNTRIES = [["+966","🇸🇦"],["+971","🇦🇪"],["+974","🇶🇦"],["+965","🇰🇼"],["+973","🇧🇭"],["+968","🇴🇲"],["+20","🇪🇬"],["+66","🇹🇭"],["+1","🇺🇸"],["+44","🇬🇧"]];
+
+/* Turns "05xxxxxxxx" or "5xxxxxxxx" into a full international number.
+   WhatsApp links fail silently on badly formed numbers, so this runs on every save. */
+function normalizePhone(raw, cc){
+  let n = String(raw || "").replace(/[^\d+]/g, "");
+  if(!n) return "";
+  if(n.startsWith("00")) n = "+" + n.slice(2);
+  if(n.startsWith("+")) return /^\+\d{8,15}$/.test(n) ? n : "";
+  n = n.replace(/^0+/, "");
+  const full = (cc || "+966") + n;
+  return /^\+\d{8,15}$/.test(full) ? full : "";
+}
+const waLink  = p => "https://wa.me/" + String(p).replace(/\D/g, "");
+const telLink = p => "tel:" + p;
+/* A location can be typed text ("Al Noor clinic") or a link a client sent
+   from WhatsApp or Maps. Text goes to Google as a search; a link opens as-is.
+   Only http(s) is accepted as a link — anything else is treated as text, so a
+   pasted javascript: string can never become a clickable href. */
+/* Digits only, with a leading zero dropped, so every way of writing the same
+   number compares equal: 0501234567, 501234567, +966501234567, 966 50 123 4567. */
+const phoneKey = p => String(p || "").replace(/\D/g, "").replace(/^0+/, "");
+
+/* Two numbers are the same person if one ends with the other — covers a stored
+   +966501234567 against a typed 0501234567, without a country-code guess. */
+function samePhone(a, b){
+  const x = phoneKey(a), y = phoneKey(b);
+  if(!x || !y) return false;
+  const [lo, hi] = x.length <= y.length ? [x, y] : [y, x];
+  return lo.length >= 7 && hi.endsWith(lo);
+}
+const findByPhone = (p, ignoreId) =>
+  clients.find(c => c.id !== ignoreId && samePhone(c.phone, p)) || null;
+
+const isWebUrl = s => /^https?:\/\/[^\s]+$/i.test(String(s || "").trim());
+
+/* A client often pastes a Maps link instead of typing an address. The address
+   is already inside the link, so show that rather than the raw URL. */
+function locationLabel(raw){
+  const s = String(raw || "").trim();
+  if(!isWebUrl(s)) return s;
+  try{
+    const u = new URL(s);
+    const m = u.pathname.match(/\/(?:search|place|dir)\/([^/@]+)/);
+    if(m){
+      /* No +-to-space here: in a path a plus is literal, and Plus Codes
+         like 255H+QM9 depend on it. Only query strings encode space as +. */
+      const txt = decodeURIComponent(m[1]).trim();
+      if(txt) return txt;
+    }
+    const q = u.searchParams.get("q");
+    if(q) return q;
+    const at = s.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if(at) return Number(at[1]).toFixed(4) + ", " + Number(at[2]).toFixed(4);
+  }catch(e){}
+  return t("locationLink");
+}
+const mapLink = l => isWebUrl(l)
+  ? String(l).trim()
+  : "https://maps.google.com/?q=" + encodeURIComponent(l);
+
+/* ============================================================
+   5. FORMATTING
+   ============================================================ */
+function fmtTime(ts){
+  return new Intl.DateTimeFormat(locale(), {hour:"2-digit", minute:"2-digit", hour12:true}).format(new Date(ts));
+}
+const fmtDaySub = d => new Intl.DateTimeFormat(locale(), {day:"numeric", month:"long", year:"numeric"}).format(d);
+const fmtWeekday = d => new Intl.DateTimeFormat(locale(), {weekday:"long"}).format(d);
+const isToday = d => startOfDay(d).getTime() === startOfDay(new Date()).getTime();
+
+/* Umm al-Qura is the official Saudi calendar. Other Hijri variants can land a
+   day off, so if the browser does not actually resolve to islamic-umalqura we
+   return nothing and the line is hidden — a missing date beats a wrong one. */
+function fmtHijri(d){
+  try{
+    const f = new Intl.DateTimeFormat(
+      (lang === "ar" ? "ar-SA" : "en-GB") + "-u-ca-islamic-umalqura",
+      {day:"numeric", month:"long", year:"numeric"}
+    );
+    if(f.resolvedOptions().calendar !== "islamic-umalqura") return "";
+    return f.format(d);
+  }catch(e){ return ""; }
+}
+const toDateInput = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ============================================================
+   6. OVERLAP CHECK
+   ============================================================ */
+function findClash(start, durationMin, ignoreId){
+  const end = start + durationMin * 60000;
+  return reservations.find(r =>
+    r.id !== ignoreId &&
+    r.status !== "cancelled" &&
+    start < r.start + r.duration * 60000 &&
+    r.start < end
+  ) || null;
+}
+
+/* ============================================================
+   7. RENDER
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const main = $("#main");
+
+function render(){
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+  $("#langBtn").textContent = lang === "ar" ? "EN" : "ع";
+  document.querySelectorAll("[data-t]").forEach(el => el.textContent = t(el.dataset.t));
+  document.querySelectorAll("nav button").forEach(b =>
+    b.setAttribute("aria-current", b.dataset.view === view ? "page" : "false"));
+  if(view === "upcoming"){
+    $("#dayName").textContent = t("upcomingTitle");
+    $("#todayTag").hidden = true;
+    $("#daySub").textContent = "";
+  }else{
+    $("#dayName").textContent = fmtWeekday(cursor);
+    const tag = $("#todayTag");
+    tag.hidden = !isToday(cursor);
+    tag.textContent = t("todayBadge");
+    const hij = fmtHijri(cursor);
+    $("#daySub").textContent = fmtDaySub(cursor) + (hij ? " · " + hij : "");
+  }
+  $("#prevDay").hidden = $("#nextDay").hidden = view === "upcoming";
+
+  const dayRes = reservations.filter(r => sameDay(r.start, cursor)).sort((a,b) => a.start - b.start);
+  const live = dayRes.filter(r => r.status !== "cancelled");
+  $("#dayMeta").innerHTML = view !== "day" ? "" :
+    (live.length
+      ? `<span>${t("booked",{n:live.length})}</span><span>${t("doneN",{n:dayRes.filter(r=>r.status==="done").length})}</span>`
+      : `<span>${t("freeDay")}</span>`);
+
+  if(view === "upcoming") main.innerHTML = renderUpcoming();
+  if(view === "day")     main.innerHTML = renderDay(dayRes);
+  if(view === "clients") main.innerHTML = renderClients();
+  if(view === "backup")  main.innerHTML = renderBackup();
+  $("#fab").hidden = view === "backup";
+}
+
+function renderDay(list){
+  if(!list.length) return `<div class="empty"><strong>${t("emptyDayTitle")}</strong>${t("emptyDayBody")}</div>`;
+  return `<div class="rail">` + list.map(r => {
+    const c = byId(r.clientId) || {name:"—"};
+    const clash = findClash(r.start, r.duration, r.id);
+    const badge = r.status === "upcoming" ? "" :
+      `<span class="badge ${r.status}">${t(r.status === "noshow" ? "noshow" : r.status)}</span>`;
+    const sub = [r.service, locationLabel(c.location)].filter(Boolean).map(esc).join(" · ");
+    return `
+      <div class="slot ${r.status}">
+        <div class="time tnum">${fmtTime(r.start)}<small>${t("dur",{n:r.duration})}</small></div>
+        <div class="body">
+          <div class="name">${esc(c.name)}${badge}</div>
+          ${sub ? `<div class="sub">${sub}</div>` : ""}
+          <div class="actions">
+            ${c.phone ? `<a class="chip wa" href="${waLink(c.phone)}" target="_blank" rel="noopener">${t("whatsapp")}</a>
+                         <a class="chip" href="${telLink(c.phone)}">${t("call")}</a>` : ""}
+            ${c.location ? `<a class="chip" href="${esc(mapLink(c.location))}" target="_blank" rel="noopener">${t("map")}</a>` : ""}
+            <button class="chip" data-editres="${r.id}">${t("edit")}</button>
+          </div>
+        </div>
+      </div>
+      ${clash ? `<div class="clash">${t("clash",{name:esc((byId(clash.clientId)||{}).name||"—"), time:fmtTime(clash.start)})}</div>` : ""}`;
+  }).join("") + `</div>`;
+}
+
+/* Everything from now on, in one list. Buckets are relative to today, so a
+   booking slides from "This week" to "Tomorrow" to "Today" on its own. */
+function upcomingBucket(ts){
+  const today = startOfDay(new Date()).getTime();
+  const days = Math.floor((startOfDay(new Date(ts)).getTime() - today) / 86400000);
+  if(days <= 0) return "groupToday";
+  if(days === 1) return "groupTomorrow";
+  if(days <= 7) return "groupWeek";
+  return "groupLater";
+}
+
+function renderUpcoming(){
+  const now = Date.now();
+  const list = reservations
+    .filter(r => r.start + r.duration * 60000 >= now && r.status !== "cancelled")
+    .sort((a,b) => a.start - b.start);
+
+  if(!list.length)
+    return `<div class="empty"><strong>${t("emptyUpcomingTitle")}</strong>${t("emptyUpcomingBody")}</div>`;
+
+  let html = `<div class="agenda">`, bucket = null, dayKey = null;
+  for(const r of list){
+    const b = upcomingBucket(r.start);
+    if(b !== bucket){ bucket = b; dayKey = null; html += `<h2 class="bucket">${t(b)}</h2>`; }
+    const dk = startOfDay(new Date(r.start)).getTime();
+    if(dk !== dayKey){
+      dayKey = dk;
+      const d = new Date(r.start);
+      html += `<div class="aday"><b>${fmtWeekday(d)}</b><span>${fmtDaySub(d)}</span></div>`;
+    }
+    const c = byId(r.clientId) || {name:"—"};
+    const badge = r.status === "upcoming" ? "" :
+      `<span class="badge ${r.status}">${t(r.status)}</span>`;
+    html += `
+      <div class="arow" data-editres="${r.id}">
+        <div class="atime tnum">${fmtTime(r.start)}</div>
+        <div class="awho">
+          <b>${esc(c.name)}${badge}</b>
+          ${r.service ? `<span>${esc(r.service)}</span>` : ""}
+        </div>
+        ${c.phone ? `<a class="mini wa" href="${waLink(c.phone)}" target="_blank" rel="noopener" aria-label="WhatsApp">✆</a>` : ""}
+      </div>`;
+  }
+  return html + `</div>`;
+}
+
+/* Shared by the clients list and the booking-form picker: a query matches on
+   name, or on digits regardless of how either side is formatted. */
+function matchClients(query){
+  const q = String(query || "").trim().toLowerCase();
+  const digits = phoneKey(q);
+  const list = clients.filter(c => {
+    if(!q) return true;
+    if(c.name.toLowerCase().includes(q)) return true;
+    return digits.length >= 2 && phoneKey(c.phone).includes(digits);
+  });
+  return list.sort((a,b) => a.name.localeCompare(b.name, lang));
+}
+
+function renderClients(){
+  const list = matchClients(clientQuery);
+  const now = Date.now();
+  return `<div class="page">
+    <h2>${t("clientsTitle")}</h2>
+    <p class="hint">${t("clientsHint")}</p>
+    <input class="search" id="clientSearch" placeholder="${t("searchClients")}" value="${esc(clientQuery)}">
+    ${list.length ? list.map(c => {
+      const n = reservations.filter(r => r.clientId === c.id && r.start >= now && r.status === "upcoming").length;
+      return `<div class="clientrow">
+        <div class="who" data-editclient="${c.id}">
+          <b>${esc(c.name)}</b>
+          <span class="tnum">${c.phone ? esc(c.phone) : t("noPhone")}${n ? " · " + t("resCount",{n}) : ""}</span>
+        </div>
+        ${c.phone ? `<a class="mini wa" href="${waLink(c.phone)}" target="_blank" rel="noopener" aria-label="WhatsApp">✆</a>` : ""}
+        <button class="mini" data-editclient="${c.id}" aria-label="${t("edit")}">✎</button>
+      </div>`;
+    }).join("") : `<div class="empty"><strong>${t("emptyClientsTitle")}</strong>${t("emptyClientsBody")}</div>`}
+  </div>`;
+}
+
+function renderBackup(){
+  return `<div class="page">
+    <h2>${t("backupTitle")}</h2>
+    <p class="hint">${t("backupHint")}</p>
+    ${(!isStandalone() && isIOS()) ? `<div class="card risk">
+      <h3>${t("homescreenH")}</h3><p>${t("homescreenIOS")}</p>
+    </div>` : isStandalone() ? `<div class="card">
+      <h3>${t("homescreenH")}</h3><p>${t("homescreenOK")}</p>
+    </div>` : ""}
+    <div class="card ${persistState === "no" ? "risk" : ""}">
+      <h3>${t("protectH")}</h3>
+      <p>${t(persistState === "yes" ? "protectYes" : persistState === "no" ? "protectNo" : "protectUnknown")}</p>
+    </div>
+    <div class="card">
+      <h3>${t("statsH")}</h3>
+      <p class="tnum">${t("nClients",{n:clients.length})} · ${t("nRes",{n:reservations.length})}</p>
+    </div>
+    <div class="card ${backupAge() === null || backupAge() > 7 ? "risk" : ""}">
+      <h3>${t("exportH")}</h3>
+      <p>${t("exportP")}<br>${lastBackupAt
+        ? t("lastBackup",{d:new Intl.DateTimeFormat(locale(),{day:"numeric",month:"short",year:"numeric"}).format(new Date(lastBackupAt))})
+        : t("neverBackup")}</p>
+      ${backupAge() === null ? `<div class="warnbox">${t("nagNever")}</div>`
+        : backupAge() > 7 ? `<div class="warnbox">${t("nagStale",{n:backupAge()})}</div>` : ""}
+      <button class="btn" id="doExport">${t("exportBtn")}</button>
+    </div>
+    <div class="card">
+      <h3>${t("importH")}</h3><p>${t("importP")}</p>
+      <button class="btn ghost" id="doImport">${t("importBtn")}</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </div>
+    <div class="card">
+      <h3>${t("resetH")}</h3><p>${t("resetP")}</p>
+      <button class="btn danger" id="doReset">${t("resetBtn")}</button>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   8. SHEETS (forms)
+   ============================================================ */
+function openSheet(html){
+  $("#sheetBody").innerHTML = html;
+  $("#sheet").classList.add("open");
+  $("#scrim").classList.add("open");
+}
+function closeSheet(){
+  $("#sheet").classList.remove("open");
+  $("#scrim").classList.remove("open");
+}
+let toastTimer;
+function toast(msg){
+  const el = $("#toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2400);
+}
+
+function clientSheet(id){
+  const c = id ? byId(id) : null;
+  const cc = c && c.phone ? (COUNTRIES.find(([code]) => c.phone.startsWith(code)) || ["+966"])[0] : "+966";
+  const local = c && c.phone ? c.phone.slice(cc.length) : "";
+  openSheet(`
+    <h2>${t(c ? "editClient" : "newClient")}</h2>
+    <div class="field"><label for="cName">${t("name")}</label>
+      <input id="cName" value="${esc(c ? c.name : "")}" autocomplete="name"></div>
+    <div class="field"><label for="cPhone">${t("phone")}</label>
+      <div class="phonewrap">
+        <select id="cCC">${COUNTRIES.map(([code,f]) => `<option value="${code}" ${code===cc?"selected":""}>${f} ${code}</option>`).join("")}</select>
+        <input id="cPhone" type="tel" inputmode="tel" class="tnum" value="${esc(local)}" placeholder="5xxxxxxxx">
+      </div></div>
+    <div class="field"><label for="cLoc">${t("location")}</label>
+      <input id="cLoc" value="${esc(c ? c.location : "")}"></div>
+    <div class="field"><label for="cNotes">${t("notes")}</label>
+      <textarea id="cNotes">${esc(c ? c.notes : "")}</textarea></div>
+    <div id="cErr"></div>
+    <button class="btn" id="cSave">${t("saveClient")}</button>
+    ${c ? `<button class="btn danger" id="cDel">${t("del")}</button>` : ""}
+    <button class="btn ghost" data-close>${t("cancel")}</button>
+  `);
+  $("#cSave").onclick = async () => {
+    const name = $("#cName").value.trim();
+    const phone = normalizePhone($("#cPhone").value, $("#cCC").value);
+    if(!name) return ($("#cErr").innerHTML = `<div class="err">${t("errName")}</div>`);
+    if(!$("#cPhone").value.trim())
+      return ($("#cErr").innerHTML = `<div class="err">${t("errPhoneRequired")}</div>`);
+    if(!phone) return ($("#cErr").innerHTML = `<div class="err">${t("errPhone")}</div>`);
+    /* Unique phone. A dead end is unhelpful, so the message names the client
+       who already holds the number and offers to open that record. */
+    const clash = findByPhone(phone, c ? c.id : null);
+    if(clash){
+      $("#cErr").innerHTML =
+        `<div class="err">${t("errPhoneTaken",{name:esc(clash.name)})}</div>
+         <button class="btn ghost" id="cGo">${t("openExisting",{name:esc(clash.name)})}</button>`;
+      $("#cGo").onclick = () => clientSheet(clash.id);
+      return;
+    }
+    const rec = {
+      id: c ? c.id : uid(), name, phone,
+      location: $("#cLoc").value.trim(), notes: $("#cNotes").value.trim(),
+      createdAt: c ? c.createdAt : Date.now(),
+      updatedAt: Date.now()
+    };
+    if(c) Object.assign(c, rec); else clients.push(rec);
+    await dbPut("clients", rec);
+    closeSheet(); render(); toast(t("savedClient"));
+  };
+  if(c) $("#cDel").onclick = async () => {
+    const mine = reservations.filter(r => r.clientId === c.id);
+    if(!confirm(t("confirmDelClient",{n:mine.length}))) return;
+    for(const r of mine) await dbDel("reservations", r.id);
+    reservations = reservations.filter(r => r.clientId !== c.id);
+    clients = clients.filter(x => x.id !== c.id);
+    await dbDel("clients", c.id);
+    closeSheet(); render(); toast(t("deletedClient"));
+  };
+}
+
+function resSheet(id){
+  const r = id ? reservations.find(x => x.id === id) : null;
+  const d = r ? new Date(r.start) : new Date(cursor.getTime());
+  if(!r){ const now = new Date(); d.setHours(now.getHours() + 1, 0, 0, 0); }
+  const h24 = d.getHours();
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  const isPM = h24 >= 12;
+  const mins = d.getMinutes();
+  /* A reservation saved before this version may sit on a minute the dropdown
+     does not offer. Keep it in the list so editing never moves the time. */
+  const minOpts = [0,15,30,45].includes(mins) ? [0,15,30,45] : [0,15,30,45,mins].sort((a,b)=>a-b);
+  openSheet(`
+    <h2>${t(r ? "editRes" : "newRes")}</h2>
+    <div class="field"><label for="rSearch">${t("client")}</label>
+      <input type="hidden" id="rClient" value="${r ? esc(r.clientId) : ""}">
+      <div id="rPicked" class="picked" ${r ? "" : "hidden"}></div>
+      <input id="rSearch" placeholder="${t("searchOrPick")}" ${r ? "hidden" : ""} autocomplete="off">
+      <div id="rResults" class="results"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="rDate">${t("date")}</label>
+        <input id="rDate" type="date" class="tnum" value="${toDateInput(d)}"></div>
+      <div class="field"><label for="rHour">${t("time")}</label>
+        <div class="timewrap">
+          <select id="rHour" class="tnum" aria-label="${t("hourL")}">
+            ${Array.from({length:12},(_,i)=>i+1).map(h =>
+              `<option value="${h}" ${h===h12?"selected":""}>${h}</option>`).join("")}
+          </select>
+          <select id="rMin" class="tnum" aria-label="${t("minuteL")}">
+            ${minOpts.map(m =>
+              `<option value="${m}" ${m===mins?"selected":""}>${String(m).padStart(2,"0")}</option>`).join("")}
+          </select>
+          <select id="rAP" aria-label="${t("ampmL")}">
+            <option value="am" ${!isPM?"selected":""}>${t("am")}</option>
+            <option value="pm" ${isPM?"selected":""}>${t("pm")}</option>
+          </select>
+        </div></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="rDur">${t("duration")}</label>
+        <input id="rDur" type="number" min="5" step="5" class="tnum" value="${r ? r.duration : 60}"></div>
+      <div class="field"><label for="rStatus">${t("status")}</label>
+        <select id="rStatus">
+          ${["upcoming","done","cancelled","noshow"].map(s =>
+            `<option value="${s}" ${r && r.status===s?"selected":""}>${t(s)}</option>`).join("")}
+        </select></div>
+    </div>
+    <div class="field"><label for="rService">${t("service")}</label>
+      <input id="rService" value="${esc(r ? r.service : "")}"></div>
+    <div class="field"><label for="rNotes">${t("notes")}</label>
+      <textarea id="rNotes">${esc(r ? r.notes : "")}</textarea></div>
+    <div id="rErr"></div>
+    <button class="btn" id="rSave">${t("saveRes")}</button>
+    ${r ? `<button class="btn danger" id="rDel">${t("del")}</button>` : ""}
+    <button class="btn ghost" data-close>${t("cancel")}</button>
+  `);
+  /* Type-to-filter picker. The chosen id lives in a hidden field, so the save
+     path below is unchanged whether the client was picked or already set. */
+  function paintPicked(){
+    const c = byId($("#rClient").value);
+    const box = $("#rPicked"), search = $("#rSearch");
+    if(c){
+      box.hidden = false;
+      box.innerHTML = `<b>${esc(c.name)}</b><span class="tnum">${esc(c.phone || "")}</span>
+                       <button type="button" class="chip" id="rClear">${t("edit")}</button>`;
+      search.hidden = true;
+      $("#rResults").innerHTML = "";
+      $("#rClear").onclick = () => {
+        $("#rClient").value = "";
+        box.hidden = true;
+        search.hidden = false;
+        search.value = "";
+        search.focus();
+        paintResults("");
+      };
+    }else{
+      box.hidden = true;
+      search.hidden = false;
+    }
+  }
+  function paintResults(q){
+    if($("#rClient").value) return;
+    const list = matchClients(q).slice(0, 8);
+    $("#rResults").innerHTML =
+      (list.length
+        ? list.map(c => `<button type="button" class="hit" data-pick="${c.id}">
+             <b>${esc(c.name)}</b><span class="tnum">${esc(c.phone || "")}</span></button>`).join("")
+        : `<div class="nohit">${t("noMatch")}</div>`) +
+      `<button type="button" class="hit addnew" id="rAddNew">${t("addNewClient")}</button>`;
+    $("#rResults").querySelectorAll("[data-pick]").forEach(b => {
+      b.onclick = () => { $("#rClient").value = b.dataset.pick; paintPicked(); };
+    });
+    $("#rAddNew").onclick = () => clientSheet(null);
+  }
+  $("#rSearch").oninput = e => paintResults(e.target.value);
+  $("#rSearch").onfocus = e => paintResults(e.target.value);
+  paintPicked();
+  if(!r) paintResults("");
+  $("#rSave").onclick = async () => {
+    const clientId = $("#rClient").value;
+    if(!clientId || !byId(clientId)) return ($("#rErr").innerHTML = `<div class="err">${t("errClient")}</div>`);
+    const dv = $("#rDate").value;
+    if(!dv) return ($("#rErr").innerHTML = `<div class="err">${t("errDateOnly")}</div>`);
+    const [Y,M,D] = dv.split("-").map(Number);
+    const h12v = parseInt($("#rHour").value, 10);
+    const m = parseInt($("#rMin").value, 10);
+    const h = $("#rAP").value === "pm" ? (h12v % 12) + 12 : h12v % 12;
+    const start = new Date(Y, M-1, D, h, m, 0, 0).getTime();
+    const duration = Math.max(5, parseInt($("#rDur").value, 10) || 60);
+    const status = $("#rStatus").value;
+    if(status !== "cancelled"){
+      const clash = findClash(start, duration, r ? r.id : null);
+      if(clash && !confirm(t("clashWarn",{name:(byId(clash.clientId)||{}).name||"—", time:fmtTime(clash.start)}))) return;
+    }
+    const rec = {
+      id: r ? r.id : uid(), clientId, start, duration, status,
+      service: $("#rService").value.trim(), notes: $("#rNotes").value.trim(),
+      createdAt: r ? r.createdAt : Date.now(),
+      updatedAt: Date.now()
+    };
+    if(r) Object.assign(r, rec); else reservations.push(rec);
+    await dbPut("reservations", rec);
+    cursor = startOfDay(new Date(start));
+    closeSheet(); render(); toast(t("savedRes"));
+  };
+  if(r) $("#rDel").onclick = async () => {
+    if(!confirm(t("confirmDelRes"))) return;
+    reservations = reservations.filter(x => x.id !== r.id);
+    await dbDel("reservations", r.id);
+    closeSheet(); render(); toast(t("deletedRes"));
+  };
+}
+
+/* ============================================================
+   9. EXPORT / IMPORT
+   ============================================================ */
+function exportData(){
+  const payload = {app:"reservations", version:1, exportedAt:new Date().toISOString(), clients, reservations};
+  const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"}));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `reservations-backup-${toDateInput(new Date())}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  lastBackupAt = Date.now();
+  dbPut("prefs", {k:"lastBackupAt", v:lastBackupAt});
+  render();
+  toast(t("exported"));
+}
+async function importData(file){
+  try{
+    const data = JSON.parse(await file.text());
+    if(!Array.isArray(data.clients) || !Array.isArray(data.reservations)) throw 0;
+    for(const c of data.clients){
+      if(!c.id || !c.name) continue;
+      const i = clients.findIndex(x => x.id === c.id);
+      if(i >= 0) clients[i] = c; else clients.push(c);
+      await dbPut("clients", c);
+    }
+    for(const r of data.reservations){
+      if(!r.id || !r.clientId) continue;
+      const i = reservations.findIndex(x => x.id === r.id);
+      if(i >= 0) reservations[i] = r; else reservations.push(r);
+      await dbPut("reservations", r);
+    }
+    render();
+    toast(t("imported",{c:data.clients.length, r:data.reservations.length}));
+  }catch(e){ toast(t("importBad")); }
+}
+
+/* ============================================================
+   10. EVENTS
+   ============================================================ */
+$("#prevDay").onclick = () => { cursor = new Date(cursor.getTime() - 86400000); view = "day"; render(); };
+$("#nextDay").onclick = () => { cursor = new Date(cursor.getTime() + 86400000); view = "day"; render(); };
+$("#dayTitle").onclick = () => { cursor = startOfDay(new Date()); view = "day"; render(); };
+$("#langBtn").onclick = async () => {
+  lang = lang === "ar" ? "en" : "ar";
+  await dbPut("prefs", {k:"lang", v:lang});
+  render();
+};
+$("#fab").onclick = () => resSheet(null);
+$("#scrim").onclick = closeSheet;
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => { view = b.dataset.view; render(); });
+
+document.addEventListener("click", e => {
+  /* An agenda row is itself tappable, and holds a WhatsApp link. Without this
+     the link would fire AND the row would open the edit sheet behind it. */
+  if(e.target.closest("a")) return;
+  const el = e.target.closest("[data-editres],[data-editclient],[data-close],#doExport,#doImport,#doReset");
+  if(!el) return;
+  if(el.dataset.editres  !== undefined) return resSheet(el.dataset.editres);
+  if(el.dataset.editclient !== undefined) return clientSheet(el.dataset.editclient);
+  if(el.dataset.close    !== undefined) return closeSheet();
+  if(el.id === "doExport") return exportData();
+  if(el.id === "doImport") return $("#importFile").click();
+  if(el.id === "doReset"){
+    if(!confirm(t("confirmReset"))) return;
+    clients = []; reservations = [];
+    dbWipe("clients"); dbWipe("reservations");
+    render(); toast(t("erased"));
+  }
+});
+document.addEventListener("change", e => {
+  if(e.target.id === "importFile" && e.target.files[0]) importData(e.target.files[0]);
+});
+document.addEventListener("input", e => {
+  if(e.target.id === "clientSearch"){
+    clientQuery = e.target.value;
+    const pos = e.target.selectionStart;
+    render();
+    const f = $("#clientSearch");
+    if(f){ f.focus(); f.setSelectionRange(pos, pos); }
+  }
+});
+
+/* ============================================================
+   11. BOOT
+   ============================================================ */
+(async function boot(){
+  await openDB();
+  if(db){
+    clients = (await dbAll("clients")) || [];
+    reservations = (await dbAll("reservations")) || [];
+    const prefs = (await dbAll("prefs")) || [];
+    const saved = prefs.find(p => p.k === "lang");
+    if(saved) lang = saved.v;
+    const lb = prefs.find(p => p.k === "lastBackupAt");
+    if(lb) lastBackupAt = lb.v;
+  }
+  if(memoryOnly){
+    const n = $("#storagenotice");
+    n.hidden = false;
+    n.textContent = T.en.memoryWarn;
+  }
+  render();
+  if("serviceWorker" in navigator && location.protocol !== "file:"){
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+  persistState = await requestPersistence();
+  if(view === "backup") render();
+})();
+</script>
+</body>
+</html>
