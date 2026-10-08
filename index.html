@@ -106,6 +106,12 @@ button{background:none;border:none;cursor:pointer}
 }
 
 /* ---------- agenda ---------- */
+.modes{display:flex;gap:8px;padding:14px 16px 2px}
+.mode{
+  flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:999px;
+  background:var(--surface);font-size:.85rem;font-weight:500;color:var(--ink-soft)
+}
+.mode.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
 .agenda{padding:4px 0 24px}
 .bucket{
   font-size:.78rem;font-weight:600;color:var(--ink-soft);
@@ -122,6 +128,7 @@ button{background:none;border:none;cursor:pointer}
   background:var(--surface);border-bottom:1px solid var(--line)
 }
 .arow:active{background:var(--paper)}
+.arow.off .atime,.arow.off .awho b{opacity:.5;text-decoration:line-through}
 .arow .atime{width:84px;flex:none;font-weight:600;font-size:.95rem}
 .arow .awho{flex:1;min-width:0}
 .arow .awho b{font-weight:600;display:block}
@@ -292,6 +299,10 @@ const T = {
     todayBadge:"Today",
     groupToday:"Today", groupTomorrow:"Tomorrow", groupWeek:"This week", groupLater:"Later",
     upcomingTitle:"Upcoming",
+    modeNext:"Upcoming", modeMonth:"By month",
+    emptyMonthTitle:"Nothing this month",
+    emptyMonthBody:"Use the arrows to look at another month.",
+    pastWarn:"This date has already passed. Save it as a completed booking?",
     emptyUpcomingTitle:"Nothing booked ahead",
     emptyUpcomingBody:"Reservations from now on will appear here.",
     am:"AM", pm:"PM", hourL:"Hour", minuteL:"Minute", ampmL:"AM or PM",
@@ -362,6 +373,10 @@ const T = {
     todayBadge:"اليوم",
     groupToday:"اليوم", groupTomorrow:"غدًا", groupWeek:"هذا الأسبوع", groupLater:"لاحقًا",
     upcomingTitle:"الحجوزات القادمة",
+    modeNext:"القادم", modeMonth:"حسب الشهر",
+    emptyMonthTitle:"لا توجد حجوزات هذا الشهر",
+    emptyMonthBody:"استخدم الأسهم لعرض شهر آخر.",
+    pastWarn:"هذا التاريخ مضى بالفعل. هل تريد حفظه كحجز منتهٍ؟",
     emptyUpcomingTitle:"لا توجد حجوزات قادمة",
     emptyUpcomingBody:"ستظهر هنا الحجوزات من الآن فصاعدًا.",
     am:"ص", pm:"م", hourL:"الساعة", minuteL:"الدقيقة", ampmL:"صباحًا أو مساءً",
@@ -503,9 +518,19 @@ async function requestPersistence(){
 let view = "day";
 let cursor = startOfDay(new Date());
 let clientQuery = "";
+let upcomingMode = "next";                 /* "next" | "month" */
+let monthCursor = startOfMonth(new Date());
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
 function startOfDay(d){ const x = new Date(d); x.setHours(0,0,0,0); return x; }
+function startOfMonth(d){ const x = new Date(d); x.setDate(1); x.setHours(0,0,0,0); return x; }
+/* Day-of-month is set to 1 before shifting, so stepping from the 31st never
+   skips a short month. */
+function addMonths(d, n){ const x = startOfMonth(d); x.setMonth(x.getMonth() + n); return x; }
+const sameMonth = (ts, d) => {
+  const a = new Date(ts);
+  return a.getFullYear() === d.getFullYear() && a.getMonth() === d.getMonth();
+};
 function sameDay(ts, d){ const a = new Date(ts); return a.getFullYear()===d.getFullYear() && a.getMonth()===d.getMonth() && a.getDate()===d.getDate(); }
 const byId = id => clients.find(c => c.id === id);
 
@@ -581,6 +606,7 @@ function fmtTime(ts){
 }
 const fmtDaySub = d => new Intl.DateTimeFormat(locale(), {day:"numeric", month:"long", year:"numeric"}).format(d);
 const fmtWeekday = d => new Intl.DateTimeFormat(locale(), {weekday:"long"}).format(d);
+const fmtMonth = d => new Intl.DateTimeFormat(locale(), {month:"long", year:"numeric"}).format(d);
 const isToday = d => startOfDay(d).getTime() === startOfDay(new Date()).getTime();
 
 /* Umm al-Qura is the official Saudi calendar. Other Hijri variants can land a
@@ -626,8 +652,10 @@ function render(){
   document.querySelectorAll("nav button").forEach(b =>
     b.setAttribute("aria-current", b.dataset.view === view ? "page" : "false"));
   if(view === "upcoming"){
-    $("#dayName").textContent = t("upcomingTitle");
-    $("#todayTag").hidden = true;
+    const isMonth = upcomingMode === "month";
+    $("#dayName").textContent = isMonth ? fmtMonth(monthCursor) : t("upcomingTitle");
+    $("#todayTag").hidden = !(isMonth && sameMonth(Date.now(), monthCursor));
+    $("#todayTag").textContent = t("todayBadge");
     $("#daySub").textContent = "";
   }else{
     $("#dayName").textContent = fmtWeekday(cursor);
@@ -637,10 +665,17 @@ function render(){
     const hij = fmtHijri(cursor);
     $("#daySub").textContent = fmtDaySub(cursor) + (hij ? " · " + hij : "");
   }
-  $("#prevDay").hidden = $("#nextDay").hidden = view === "upcoming";
+  /* The same arrows step days in the day view and months in month mode. */
+  const arrowsOff = view === "clients" || view === "backup" ||
+                    (view === "upcoming" && upcomingMode !== "month");
+  $("#prevDay").hidden = $("#nextDay").hidden = arrowsOff;
 
   const dayRes = reservations.filter(r => sameDay(r.start, cursor)).sort((a,b) => a.start - b.start);
   const live = dayRes.filter(r => r.status !== "cancelled");
+  if(view === "upcoming" && upcomingMode === "month"){
+    const n = reservations.filter(r => sameMonth(r.start, monthCursor)).length;
+    $("#dayMeta").innerHTML = `<span>${t("booked",{n})}</span>`;
+  }else
   $("#dayMeta").innerHTML = view !== "day" ? "" :
     (live.length
       ? `<span>${t("booked",{n:live.length})}</span><span>${t("doneN",{n:dayRes.filter(r=>r.status==="done").length})}</span>`
@@ -690,16 +725,65 @@ function upcomingBucket(ts){
   return "groupLater";
 }
 
+/* One row, shared by both modes. */
+function agendaRow(r){
+  const c = byId(r.clientId) || {name:"—"};
+  const badge = r.status === "upcoming" ? "" :
+    `<span class="badge ${r.status}">${t(r.status)}</span>`;
+  return `
+    <div class="arow ${r.status === "cancelled" ? "off" : ""}" data-editres="${r.id}">
+      <div class="atime tnum">${fmtTime(r.start)}</div>
+      <div class="awho">
+        <b>${esc(c.name)}${badge}</b>
+        ${r.service ? `<span>${esc(r.service)}</span>` : ""}
+      </div>
+      ${c.phone ? `<a class="mini wa" href="${waLink(c.phone)}" target="_blank" rel="noopener" aria-label="WhatsApp">✆</a>` : ""}
+    </div>`;
+}
+
+function modeToggle(){
+  return `<div class="modes">
+    <button class="mode ${upcomingMode === "next" ? "on" : ""}" data-mode="next">${t("modeNext")}</button>
+    <button class="mode ${upcomingMode === "month" ? "on" : ""}" data-mode="month">${t("modeMonth")}</button>
+  </div>`;
+}
+
+/* Everything in the chosen month — past and future, every status, cancelled
+   included but dimmed, so a cancellation leaves a visible trace. */
+function renderMonth(){
+  const list = reservations
+    .filter(r => sameMonth(r.start, monthCursor))
+    .sort((a,b) => a.start - b.start);
+
+  if(!list.length)
+    return modeToggle() +
+      `<div class="empty"><strong>${t("emptyMonthTitle")}</strong>${t("emptyMonthBody")}</div>`;
+
+  let html = modeToggle() + `<div class="agenda">`, dayKey = null;
+  for(const r of list){
+    const dk = startOfDay(new Date(r.start)).getTime();
+    if(dk !== dayKey){
+      dayKey = dk;
+      const d = new Date(r.start);
+      html += `<div class="aday"><b>${fmtWeekday(d)}</b><span>${fmtDaySub(d)}</span></div>`;
+    }
+    html += agendaRow(r);
+  }
+  return html + `</div>`;
+}
+
 function renderUpcoming(){
+  if(upcomingMode === "month") return renderMonth();
   const now = Date.now();
   const list = reservations
     .filter(r => r.start + r.duration * 60000 >= now && r.status !== "cancelled")
     .sort((a,b) => a.start - b.start);
 
   if(!list.length)
-    return `<div class="empty"><strong>${t("emptyUpcomingTitle")}</strong>${t("emptyUpcomingBody")}</div>`;
+    return modeToggle() +
+      `<div class="empty"><strong>${t("emptyUpcomingTitle")}</strong>${t("emptyUpcomingBody")}</div>`;
 
-  let html = `<div class="agenda">`, bucket = null, dayKey = null;
+  let html = modeToggle() + `<div class="agenda">`, bucket = null, dayKey = null;
   for(const r of list){
     const b = upcomingBucket(r.start);
     if(b !== bucket){ bucket = b; dayKey = null; html += `<h2 class="bucket">${t(b)}</h2>`; }
@@ -709,18 +793,7 @@ function renderUpcoming(){
       const d = new Date(r.start);
       html += `<div class="aday"><b>${fmtWeekday(d)}</b><span>${fmtDaySub(d)}</span></div>`;
     }
-    const c = byId(r.clientId) || {name:"—"};
-    const badge = r.status === "upcoming" ? "" :
-      `<span class="badge ${r.status}">${t(r.status)}</span>`;
-    html += `
-      <div class="arow" data-editres="${r.id}">
-        <div class="atime tnum">${fmtTime(r.start)}</div>
-        <div class="awho">
-          <b>${esc(c.name)}${badge}</b>
-          ${r.service ? `<span>${esc(r.service)}</span>` : ""}
-        </div>
-        ${c.phone ? `<a class="mini wa" href="${waLink(c.phone)}" target="_blank" rel="noopener" aria-label="WhatsApp">✆</a>` : ""}
-      </div>`;
+    html += agendaRow(r);
   }
   return html + `</div>`;
 }
@@ -984,7 +1057,15 @@ function resSheet(id){
     const h = $("#rAP").value === "pm" ? (h12v % 12) + 12 : h12v % 12;
     const start = new Date(Y, M-1, D, h, m, 0, 0).getTime();
     const duration = Math.max(5, parseInt($("#rDur").value, 10) || 60);
-    const status = $("#rStatus").value;
+    let status = $("#rStatus").value;
+    /* A booking in the past marked "upcoming" is almost always a mistyped date,
+       and it would vanish from the Upcoming tab unseen. Warn, and on confirm
+       record it as done. A past date with any other status is coherent already,
+       so it passes without a prompt. */
+    if(status === "upcoming" && startOfDay(new Date(start)) < startOfDay(new Date())){
+      if(!confirm(t("pastWarn"))) return;
+      status = "done";
+    }
     if(status !== "cancelled"){
       const clash = findClash(start, duration, r ? r.id : null);
       if(clash && !confirm(t("clashWarn",{name:(byId(clash.clientId)||{}).name||"—", time:fmtTime(clash.start)}))) return;
@@ -1048,8 +1129,18 @@ async function importData(file){
 /* ============================================================
    10. EVENTS
    ============================================================ */
-$("#prevDay").onclick = () => { cursor = new Date(cursor.getTime() - 86400000); view = "day"; render(); };
-$("#nextDay").onclick = () => { cursor = new Date(cursor.getTime() + 86400000); view = "day"; render(); };
+/* In month mode the arrows step months; everywhere else they step days. */
+function step(n){
+  if(view === "upcoming" && upcomingMode === "month"){
+    monthCursor = addMonths(monthCursor, n);
+  }else{
+    cursor = new Date(cursor.getTime() + n * 86400000);
+    view = "day";
+  }
+  render();
+}
+$("#prevDay").onclick = () => step(-1);
+$("#nextDay").onclick = () => step(1);
 $("#dayTitle").onclick = () => { cursor = startOfDay(new Date()); view = "day"; render(); };
 $("#langBtn").onclick = async () => {
   lang = lang === "ar" ? "en" : "ar";
@@ -1064,8 +1155,13 @@ document.addEventListener("click", e => {
   /* An agenda row is itself tappable, and holds a WhatsApp link. Without this
      the link would fire AND the row would open the edit sheet behind it. */
   if(e.target.closest("a")) return;
-  const el = e.target.closest("[data-editres],[data-editclient],[data-close],#doExport,#doImport,#doReset");
+  const el = e.target.closest("[data-mode],[data-editres],[data-editclient],[data-close],#doExport,#doImport,#doReset");
   if(!el) return;
+  if(el.dataset.mode !== undefined){
+    upcomingMode = el.dataset.mode;
+    if(upcomingMode === "month") monthCursor = startOfMonth(new Date());
+    return render();
+  }
   if(el.dataset.editres  !== undefined) return resSheet(el.dataset.editres);
   if(el.dataset.editclient !== undefined) return clientSheet(el.dataset.editclient);
   if(el.dataset.close    !== undefined) return closeSheet();

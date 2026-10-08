@@ -1,5 +1,5 @@
 /* Offline shell. Bump CACHE when you change any file, or phones keep the old copy. */
-const CACHE = "reservations-v5";
+const CACHE = "reservations-v6";
 const SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {

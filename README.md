@@ -59,6 +59,22 @@ service worker registers normally there.
 That last row is the one people forget. If you change the app and your phone
 still shows the old version, you didn't bump the cache name.
 
+## Changes in v6
+
+- **Past-date warning.** Saving a reservation dated before today with status
+  "upcoming" now asks first, and on confirm records it as "done" instead. A past
+  date with any other status is coherent, so it saves without a prompt. This
+  catches a mistyped date, which would otherwise vanish — the Upcoming tab
+  filters past bookings out, so the mistake would be invisible.
+- **Month mode on the Upcoming tab.** A toggle switches between:
+  - *Upcoming* — everything ahead, grouped Today / Tomorrow / This week / Later.
+  - *By month* — one month at a time, every booking in it, past and future, all
+    statuses. Cancelled ones are dimmed and struck through so a cancellation
+    leaves a visible trace. The header shows the month and the booking count.
+  The ‹ › arrows in the top bar step months in month mode and days elsewhere.
+  Month stepping is anchored to day 1, so moving from the 31st never skips a
+  short month.
+
 ## Changes in v5
 
 - **Fixed: the time dropdowns were unusable on a phone.** Date and time shared
