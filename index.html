@@ -50,6 +50,7 @@ button{background:none;border:none;cursor:pointer}
 }
 .iconbtn:active{background:rgba(255,255,255,.2)}
 .topbar .meta{display:flex;gap:14px;margin-top:10px;font-size:.8rem;opacity:.7}
+.topbar .meta .full{color:#F3C77B;opacity:1;font-weight:600}
 .lang{font-size:.85rem;font-weight:600;padding:0 12px;width:auto}
 
 /* ---------- day rail ---------- */
@@ -154,6 +155,26 @@ button{background:none;border:none;cursor:pointer}
 .nohit{padding:12px 4px;font-size:.85rem;color:var(--ink-soft)}
 
 /* ---------- time dropdowns ---------- */
+/* ---------- slot picker ---------- */
+.slotgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.slotbtn{
+  display:flex;flex-direction:column;align-items:center;gap:1px;
+  padding:11px 8px;border:1px solid var(--line);border-radius:12px;
+  background:var(--surface);text-align:center;min-height:62px;justify-content:center
+}
+.slotbtn b{font-size:.9rem;font-weight:600}
+.slotbtn span{font-size:.78rem;color:var(--ink-soft)}
+.slotbtn em{
+  font-style:normal;font-size:.72rem;font-weight:600;color:var(--danger);
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+.slotbtn.on{border-color:var(--primary);background:var(--primary-soft);border-width:2px}
+.slotbtn.on b{color:var(--primary)}
+.slotbtn.taken{background:var(--danger-soft);border-color:var(--danger-soft)}
+.slotbtn.taken b,.slotbtn.taken span{color:var(--danger);opacity:.85}
+.slotbtn.taken.on{border-color:var(--danger)}
+.topbar .meta .full{text-decoration:line-through;opacity:.45}
+
 .timewrap{display:flex;gap:8px}
 /* min-width:0 lets a flex child shrink below its content width instead of
    overflowing; without it a narrow select clips its own text. */
@@ -309,6 +330,11 @@ const T = {
     errDateOnly:"Choose a date.",
     today:"Today", tomorrow:"Tomorrow", yesterday:"Yesterday",
     booked:"{n} booked", doneN:"{n} done", freeDay:"Nothing booked",
+    slot_m1:"Morning 1", slot_m2:"Morning 2", slot_e1:"Evening 1", slot_e2:"Evening 2",
+    slotCustom:"Other time",
+    errSlot:"Choose a time slot.",
+    errSlotTaken:"{slot} is already taken by {name}. Remove that booking first.",
+    openBooking:"Open {name}'s booking",
     emptyDayTitle:"No reservations this day",
     emptyDayBody:"Tap + to book a client.",
     emptyClientsTitle:"No clients yet",
@@ -383,6 +409,11 @@ const T = {
     errDateOnly:"اختر التاريخ.",
     today:"اليوم", tomorrow:"غدًا", yesterday:"أمس",
     booked:"{n} حجز", doneN:"{n} منتهي", freeDay:"لا يوجد حجز",
+    slot_m1:"صباح ١", slot_m2:"صباح ٢", slot_e1:"مساء ١", slot_e2:"مساء ٢",
+    slotCustom:"وقت آخر",
+    errSlot:"اختر الموعد.",
+    errSlotTaken:"{slot} محجوز بالفعل لـ {name}. احذف الحجز القديم أولاً.",
+    openBooking:"فتح حجز {name}",
     emptyDayTitle:"لا توجد حجوزات في هذا اليوم",
     emptyDayBody:"اضغط + لحجز موعد لعميل.",
     emptyClientsTitle:"لا يوجد عملاء بعد",
@@ -628,6 +659,42 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 /* ============================================================
    6. OVERLAP CHECK
    ============================================================ */
+/* ============================================================
+   FIXED DAILY SLOTS
+   Four bookable times a day, one client each. To change the hours, edit
+   this array — nothing else needs touching. A booking stored at any other
+   time still displays, it simply carries no slot name.
+   ============================================================ */
+const SLOTS = [
+  {key:"m1", h:7,  m:0},
+  {key:"m2", h:9,  m:0},
+  {key:"e1", h:16, m:0},
+  {key:"e2", h:18, m:0}
+];
+const slotName = key => t("slot_" + key);
+/* Which slot a timestamp is, or null for a booking at any other time —
+   one made before slots existed, or edited to a custom time. */
+function slotOf(ts){
+  const d = new Date(ts);
+  const s = SLOTS.find(s => s.h === d.getHours() && s.m === d.getMinutes());
+  return s ? s.key : null;
+}
+/* The exact timestamp a slot occupies on a given date (yyyy-mm-dd). */
+function slotStart(dateStr, key){
+  const s = SLOTS.find(s => s.key === key);
+  if(!s || !dateStr) return null;
+  const [Y,M,D] = dateStr.split("-").map(Number);
+  return new Date(Y, M-1, D, s.h, s.m, 0, 0).getTime();
+}
+/* Who holds a slot on a date. Cancelled bookings free it. */
+function slotHolder(dateStr, key, ignoreId){
+  const start = slotStart(dateStr, key);
+  if(start === null) return null;
+  return reservations.find(r =>
+    r.id !== ignoreId && r.status !== "cancelled" && r.start === start) || null;
+}
+const slotLabelOf = r => { const k = slotOf(r.start); return k ? slotName(k) : ""; };
+
 function findClash(start, durationMin, ignoreId){
   const end = start + durationMin * 60000;
   return reservations.find(r =>
@@ -671,15 +738,17 @@ function render(){
   $("#prevDay").hidden = $("#nextDay").hidden = arrowsOff;
 
   const dayRes = reservations.filter(r => sameDay(r.start, cursor)).sort((a,b) => a.start - b.start);
-  const live = dayRes.filter(r => r.status !== "cancelled");
   if(view === "upcoming" && upcomingMode === "month"){
     const n = reservations.filter(r => sameMonth(r.start, monthCursor)).length;
     $("#dayMeta").innerHTML = `<span>${t("booked",{n})}</span>`;
-  }else
-  $("#dayMeta").innerHTML = view !== "day" ? "" :
-    (live.length
-      ? `<span>${t("booked",{n:live.length})}</span><span>${t("doneN",{n:dayRes.filter(r=>r.status==="done").length})}</span>`
-      : `<span>${t("freeDay")}</span>`);
+  }else if(view === "day"){
+    /* Which of the four slots are free that day, without counting rows. */
+    const dv = toDateInput(cursor);
+    $("#dayMeta").innerHTML = SLOTS.map(s => {
+      const held = slotHolder(dv, s.key, null);
+      return `<span class="${held ? "full" : ""}">${slotName(s.key)}</span>`;
+    }).join("");
+  }else $("#dayMeta").innerHTML = "";
 
   if(view === "upcoming") main.innerHTML = renderUpcoming();
   if(view === "day")     main.innerHTML = renderDay(dayRes);
@@ -695,7 +764,8 @@ function renderDay(list){
     const clash = findClash(r.start, r.duration, r.id);
     const badge = r.status === "upcoming" ? "" :
       `<span class="badge ${r.status}">${t(r.status === "noshow" ? "noshow" : r.status)}</span>`;
-    const sub = [r.service, locationLabel(c.location)].filter(Boolean).map(esc).join(" · ");
+    const slot = slotLabelOf(r);
+    const sub = [slot, r.service, locationLabel(c.location)].filter(Boolean).map(esc).join(" · ");
     return `
       <div class="slot ${r.status}">
         <div class="time tnum">${fmtTime(r.start)}<small>${t("dur",{n:r.duration})}</small></div>
@@ -954,13 +1024,10 @@ function resSheet(id){
   const r = id ? reservations.find(x => x.id === id) : null;
   const d = r ? new Date(r.start) : new Date(cursor.getTime());
   if(!r){ const now = new Date(); d.setHours(now.getHours() + 1, 0, 0, 0); }
-  const h24 = d.getHours();
-  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-  const isPM = h24 >= 12;
-  const mins = d.getMinutes();
-  /* A reservation saved before this version may sit on a minute the dropdown
-     does not offer. Keep it in the list so editing never moves the time. */
-  const minOpts = [0,15,30,45].includes(mins) ? [0,15,30,45] : [0,15,30,45,mins].sort((a,b)=>a-b);
+  /* A booking stored at any other time keeps its own chip, so opening and
+     saving an older record never silently moves it into a slot. */
+  const curSlot = r ? slotOf(r.start) : null;
+  const legacy = r && !curSlot ? fmtTime(r.start) : null;
   openSheet(`
     <h2>${t(r ? "editRes" : "newRes")}</h2>
     <div class="field"><label for="rSearch">${t("client")}</label>
@@ -971,24 +1038,12 @@ function resSheet(id){
     </div>
     <div class="field"><label for="rDate">${t("date")}</label>
       <input id="rDate" type="date" class="tnum" value="${toDateInput(d)}"></div>
-    <div class="field"><label for="rHour">${t("time")}</label>
-      <div class="timewrap">
-        <select id="rHour" class="tnum" aria-label="${t("hourL")}">
-          ${Array.from({length:12},(_,i)=>i+1).map(h =>
-            `<option value="${h}" ${h===h12?"selected":""}>${h}</option>`).join("")}
-        </select>
-        <select id="rMin" class="tnum" aria-label="${t("minuteL")}">
-          ${minOpts.map(m =>
-            `<option value="${m}" ${m===mins?"selected":""}>${String(m).padStart(2,"0")}</option>`).join("")}
-        </select>
-        <select id="rAP" aria-label="${t("ampmL")}">
-          <option value="am" ${!isPM?"selected":""}>${t("am")}</option>
-          <option value="pm" ${isPM?"selected":""}>${t("pm")}</option>
-        </select>
-      </div></div>
+    <div class="field"><label>${t("time")}</label>
+      <input type="hidden" id="rSlot" value="${curSlot || (legacy ? "__legacy" : "")}">
+      <div class="slotgrid" id="rSlots"></div></div>
     <div class="row">
       <div class="field"><label for="rDur">${t("duration")}</label>
-        <input id="rDur" type="number" min="5" step="5" class="tnum" value="${r ? r.duration : 60}"></div>
+        <input id="rDur" type="number" min="5" step="5" class="tnum" value="${r ? r.duration : 120}"></div>
       <div class="field"><label for="rStatus">${t("status")}</label>
         <select id="rStatus">
           ${["upcoming","done","cancelled","noshow"].map(s =>
@@ -1042,6 +1097,31 @@ function resSheet(id){
     });
     $("#rAddNew").onclick = () => clientSheet(null);
   }
+  /* Which slots are free depends on the date, so repaint whenever it changes.
+     Showing the holder up front prevents most refusals at save time. */
+  function paintSlots(){
+    const dv = $("#rDate").value;
+    const chosen = $("#rSlot").value;
+    let html = SLOTS.map(s => {
+      const held = dv ? slotHolder(dv, s.key, r ? r.id : null) : null;
+      const who = held ? (byId(held.clientId) || {name:"—"}).name : "";
+      return `<button type="button" class="slotbtn ${chosen === s.key ? "on" : ""} ${held ? "taken" : ""}" data-slot="${s.key}">
+          <b>${slotName(s.key)}</b>
+          <span class="tnum">${fmtTime(slotStart(dv || toDateInput(new Date()), s.key))}</span>
+          ${held ? `<em>${esc(who)}</em>` : ""}
+        </button>`;
+    }).join("");
+    if(legacy)
+      html += `<button type="button" class="slotbtn ${chosen === "__legacy" ? "on" : ""}" data-slot="__legacy">
+          <b>${t("slotCustom")}</b><span class="tnum">${esc(legacy)}</span></button>`;
+    $("#rSlots").innerHTML = html;
+    $("#rSlots").querySelectorAll("[data-slot]").forEach(btn => {
+      btn.onclick = () => { $("#rSlot").value = btn.dataset.slot; paintSlots(); };
+    });
+  }
+  $("#rDate").onchange = paintSlots;
+  paintSlots();
+
   $("#rSearch").oninput = e => paintResults(e.target.value);
   $("#rSearch").onfocus = e => paintResults(e.target.value);
   paintPicked();
@@ -1051,13 +1131,29 @@ function resSheet(id){
     if(!clientId || !byId(clientId)) return ($("#rErr").innerHTML = `<div class="err">${t("errClient")}</div>`);
     const dv = $("#rDate").value;
     if(!dv) return ($("#rErr").innerHTML = `<div class="err">${t("errDateOnly")}</div>`);
+    const slotKey = $("#rSlot").value;
+    if(!slotKey) return ($("#rErr").innerHTML = `<div class="err">${t("errSlot")}</div>`);
+    /* __legacy keeps a pre-slot booking at its original time. */
     const [Y,M,D] = dv.split("-").map(Number);
-    const h12v = parseInt($("#rHour").value, 10);
-    const m = parseInt($("#rMin").value, 10);
-    const h = $("#rAP").value === "pm" ? (h12v % 12) + 12 : h12v % 12;
-    const start = new Date(Y, M-1, D, h, m, 0, 0).getTime();
-    const duration = Math.max(5, parseInt($("#rDur").value, 10) || 60);
+    const start = slotKey === "__legacy"
+      ? new Date(Y, M-1, D, new Date(r.start).getHours(), new Date(r.start).getMinutes(), 0, 0).getTime()
+      : slotStart(dv, slotKey);
+    const duration = Math.max(5, parseInt($("#rDur").value, 10) || 120);
     let status = $("#rStatus").value;
+    /* One client per slot. A refusal, not a warning — the old booking has to be
+       removed first, so the message names its owner and opens it directly.
+       Cancelled bookings are excluded, so cancelling frees the slot. */
+    if(status !== "cancelled" && slotKey !== "__legacy"){
+      const held = slotHolder(dv, slotKey, r ? r.id : null);
+      if(held){
+        const who = (byId(held.clientId) || {}).name || "—";
+        $("#rErr").innerHTML =
+          `<div class="err">${t("errSlotTaken",{slot:slotName(slotKey), name:esc(who)})}</div>
+           <button class="btn ghost" id="rGo">${t("openBooking",{name:esc(who)})}</button>`;
+        $("#rGo").onclick = () => resSheet(held.id);
+        return;
+      }
+    }
     /* A booking in the past marked "upcoming" is almost always a mistyped date,
        and it would vanish from the Upcoming tab unseen. Warn, and on confirm
        record it as done. A past date with any other status is coherent already,

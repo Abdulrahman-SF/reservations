@@ -59,6 +59,31 @@ service worker registers normally there.
 That last row is the one people forget. If you change the app and your phone
 still shows the old version, you didn't bump the cache name.
 
+## Changes in v7
+
+**Fixed daily slots.** The day now has exactly four bookable times, one client
+each:
+
+| Slot | Time |
+|---|---|
+| Morning 1 / صباح ١ | 7:00 |
+| Morning 2 / صباح ٢ | 9:00 |
+| Evening 1 / مساء ١ | 16:00 |
+| Evening 2 / مساء ٢ | 18:00 |
+
+- The time dropdowns are gone. The booking form shows four buttons; tap one.
+- Before you save, a taken slot is already marked red with the name of the
+  client holding it, so most conflicts never reach the save button.
+- Saving into a taken slot is **refused**, not warned. The message names the
+  client and gives a button that opens their booking, so you can remove it.
+- A cancelled booking frees its slot. Done and no-show do not.
+- The day header lists all four slots, with used ones struck through.
+- A booking stored at any other time (made before this version) keeps its own
+  "Other time" chip in the form, so editing it never silently moves it.
+
+To change the hours, edit the `SLOTS` array near the top of the script. Nothing
+else needs touching.
+
 ## Changes in v6
 
 - **Past-date warning.** Saving a reservation dated before today with status
