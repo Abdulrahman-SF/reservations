@@ -59,6 +59,28 @@ service worker registers normally there.
 That last row is the one people forget. If you change the app and your phone
 still shows the old version, you didn't bump the cache name.
 
+## Changes in v8
+
+Readability pass, from the first real user's feedback: text too small and too
+thin.
+
+- **Everything is bigger and heavier.** Base size 16px → 17px, body weight 400 →
+  500, headings and names 600 → 700. The small sizes were the real problem —
+  nothing is below 0.78rem now (was 0.68rem, about 11px).
+- **Muted text is darker** (`--ink-soft` #5A6672 → #475563) for contrast. Thin
+  grey text reads as faint even at a larger size.
+- **Text size control** in the Backup tab: Normal / Large / Largest. It changes
+  the root font size (17 / 19 / 21px) and every size in the stylesheet is in
+  `rem`, so the whole interface scales together. The choice is saved with the
+  language preference and survives reload.
+- Two fixes the larger type exposed: the day rail was a fixed 104px and broke
+  "07:00 ص" across two lines (now `7.2rem`, so it scales with the text), and the
+  Gregorian and Hijri dates now sit on their own lines instead of wrapping
+  unpredictably.
+
+If the user still wants it bigger, raise the three values in the
+`html[data-scale]` rules at the top of the stylesheet.
+
 ## Changes in v7
 
 **Fixed daily slots.** The day now has exactly four bookable times, one client

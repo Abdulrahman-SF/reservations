@@ -14,21 +14,26 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#16212B; --ink-soft:#5A6672; --line:#E2E6EA;
+  --ink:#16212B; --ink-soft:#475563; --line:#E2E6EA;
   --paper:#F7F8FA; --surface:#FFFFFF;
   --primary:#0F6B5C; --primary-soft:#E6F1EE;
   --warn:#C98A12; --warn-soft:#FBF2DE;
   --danger:#B3261E; --danger-soft:#FBE9E7;
-  --rail:104px;
+  --rail:7.2rem;
   --font:"IBM Plex Sans Arabic",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   --sheet-ease:cubic-bezier(.2,.8,.2,1);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+/* One knob for the whole interface: every size below is in rem, so changing
+   this scales the entire app. The Backup tab sets data-scale. */
+html{font-size:17px}
+html[data-scale="l"]{font-size:19px}
+html[data-scale="xl"]{font-size:21px}
 [hidden]{display:none!important}
 html,body{height:100%}
 body{
   font-family:var(--font); background:var(--paper); color:var(--ink);
-  font-size:16px; line-height:1.45;
+  font-size:1rem; font-weight:500; line-height:1.5;
   padding-bottom:calc(72px + env(safe-area-inset-bottom));
   overscroll-behavior-y:none;
 }
@@ -42,25 +47,26 @@ button{background:none;border:none;cursor:pointer}
   padding:calc(12px + env(safe-area-inset-top)) 16px 14px;
 }
 .daynav{display:flex;align-items:center;gap:8px}
-.daynav h1{font-size:1.4rem;font-weight:600;letter-spacing:-.01em;flex:1;min-width:0}
-.daynav h1 span{display:block;font-size:.8rem;font-weight:400;opacity:.65;letter-spacing:0}
+.daynav h1{font-size:1.5rem;font-weight:700;letter-spacing:-.01em;flex:1;min-width:0}
+.daynav h1 span{display:block;font-size:.86rem;font-weight:500;opacity:.78;letter-spacing:0;line-height:1.35}
+.daynav h1 span i{display:block;font-style:normal;opacity:.8}
 .iconbtn{
   width:40px;height:40px;border-radius:10px;display:grid;place-items:center;
   color:#fff;background:rgba(255,255,255,.09);flex:none;font-size:1.1rem
 }
 .iconbtn:active{background:rgba(255,255,255,.2)}
-.topbar .meta{display:flex;gap:14px;margin-top:10px;font-size:.8rem;opacity:.7}
+.topbar .meta{display:flex;gap:14px;margin-top:10px;font-size:.88rem;font-weight:500;opacity:.8}
 .topbar .meta .full{color:#F3C77B;opacity:1;font-weight:600}
-.lang{font-size:.85rem;font-weight:600;padding:0 12px;width:auto}
+.lang{font-size:.92rem;font-weight:700;padding:0 12px;width:auto}
 
 /* ---------- day rail ---------- */
 .rail{padding:8px 0 24px}
 .slot{display:flex;align-items:stretch;position:relative}
 .slot .time{
   width:var(--rail); flex:none; padding:16px 12px 16px 16px; text-align:end;
-  font-size:1.05rem;font-weight:600;
+  font-size:1.15rem;font-weight:700;white-space:nowrap;
 }
-.slot .time small{display:block;font-size:.72rem;font-weight:400;color:var(--ink-soft)}
+.slot .time small{display:block;font-size:.85rem;font-weight:500;color:var(--ink-soft)}
 .slot .body{
   flex:1;min-width:0;border-inline-start:2px solid var(--line);
   padding:16px 16px 16px 18px;position:relative;
@@ -73,35 +79,35 @@ button{background:none;border:none;cursor:pointer}
 .slot.done .body::before{background:var(--ink-soft)}
 .slot.cancelled .body::before,.slot.noshow .body::before{background:var(--danger)}
 .slot.cancelled .name{text-decoration:line-through;color:var(--ink-soft)}
-.slot .name{font-size:1.05rem;font-weight:600}
+.slot .name{font-size:1.15rem;font-weight:700}
 /* One line, always. No pasted value can break the row layout. */
 .slot .sub{
-  font-size:.85rem;color:var(--ink-soft);margin-top:2px;
+  font-size:.92rem;color:var(--ink-soft);margin-top:3px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis
 }
 .slot .sub .where{display:inline-block}
 .actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .chip{
   border:1px solid var(--line);background:var(--surface);border-radius:999px;
-  padding:7px 14px;font-size:.85rem;font-weight:500;display:inline-flex;gap:6px;align-items:center;
+  padding:9px 15px;font-size:.92rem;font-weight:600;display:inline-flex;gap:6px;align-items:center;
   text-decoration:none;color:var(--ink)
 }
 .chip:active{background:var(--paper)}
 .chip.wa{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
 .badge{
-  font-size:.7rem;font-weight:600;padding:2px 8px;border-radius:999px;
+  font-size:.8rem;font-weight:700;padding:3px 9px;border-radius:999px;
   background:var(--primary-soft);color:var(--primary);margin-inline-start:8px;vertical-align:1px
 }
 .badge.done{background:#EEF0F2;color:var(--ink-soft)}
 .badge.cancelled,.badge.noshow{background:var(--danger-soft);color:var(--danger)}
 .clash{
   margin:2px 16px 0;padding:8px 12px;border-radius:8px;
-  background:var(--warn-soft);color:#7A5304;font-size:.8rem;font-weight:500
+  background:var(--warn-soft);color:#7A5304;font-size:.88rem;font-weight:600
 }
 
 /* ---------- today badge ---------- */
 #dayTitle em{
-  font-style:normal;font-size:.68rem;font-weight:600;letter-spacing:.02em;
+  font-style:normal;font-size:.78rem;font-weight:700;letter-spacing:.02em;
   background:rgba(255,255,255,.16);padding:3px 9px;border-radius:999px;
   margin-inline-start:8px;vertical-align:3px
 }
@@ -110,38 +116,38 @@ button{background:none;border:none;cursor:pointer}
 .modes{display:flex;gap:8px;padding:14px 16px 2px}
 .mode{
   flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:999px;
-  background:var(--surface);font-size:.85rem;font-weight:500;color:var(--ink-soft)
+  background:var(--surface);font-size:.92rem;font-weight:600;color:var(--ink-soft)
 }
 .mode.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
 .agenda{padding:4px 0 24px}
 .bucket{
-  font-size:.78rem;font-weight:600;color:var(--ink-soft);
+  font-size:.88rem;font-weight:700;color:var(--ink-soft);
   padding:18px 16px 6px;letter-spacing:.02em
 }
 .aday{
   display:flex;align-items:baseline;gap:8px;padding:8px 16px 4px;
   border-top:1px solid var(--line)
 }
-.aday b{font-size:.95rem;font-weight:600}
-.aday span{font-size:.78rem;color:var(--ink-soft)}
+.aday b{font-size:1.05rem;font-weight:700}
+.aday span{font-size:.88rem;color:var(--ink-soft)}
 .arow{
   display:flex;align-items:center;gap:12px;padding:12px 16px;
   background:var(--surface);border-bottom:1px solid var(--line)
 }
 .arow:active{background:var(--paper)}
 .arow.off .atime,.arow.off .awho b{opacity:.5;text-decoration:line-through}
-.arow .atime{width:84px;flex:none;font-weight:600;font-size:.95rem}
+.arow .atime{width:5.6rem;flex:none;font-weight:700;font-size:1.05rem}
 .arow .awho{flex:1;min-width:0}
-.arow .awho b{font-weight:600;display:block}
-.arow .awho span{font-size:.82rem;color:var(--ink-soft)}
+.arow .awho b{font-weight:700;display:block}
+.arow .awho span{font-size:.9rem;color:var(--ink-soft)}
 
 /* ---------- client picker ---------- */
 .picked{
   display:flex;align-items:center;gap:10px;padding:11px 13px;
   border:1px solid var(--primary);background:var(--primary-soft);border-radius:10px
 }
-.picked b{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.picked span{font-size:.82rem;color:var(--ink-soft)}
+.picked b{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.picked span{font-size:.9rem;color:var(--ink-soft)}
 .results{margin-top:8px;max-height:238px;overflow-y:auto}
 .hit{
   display:flex;align-items:center;gap:10px;width:100%;text-align:start;
@@ -149,10 +155,10 @@ button{background:none;border:none;cursor:pointer}
   background:var(--surface);margin-bottom:6px
 }
 .hit:active{background:var(--paper)}
-.hit b{font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hit span{font-size:.82rem;color:var(--ink-soft)}
+.hit b{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hit span{font-size:.9rem;color:var(--ink-soft)}
 .hit.addnew{justify-content:center;color:var(--primary);border-style:dashed;font-weight:500}
-.nohit{padding:12px 4px;font-size:.85rem;color:var(--ink-soft)}
+.nohit{padding:12px 4px;font-size:.92rem;color:var(--ink-soft)}
 
 /* ---------- time dropdowns ---------- */
 /* ---------- slot picker ---------- */
@@ -162,10 +168,10 @@ button{background:none;border:none;cursor:pointer}
   padding:11px 8px;border:1px solid var(--line);border-radius:12px;
   background:var(--surface);text-align:center;min-height:62px;justify-content:center
 }
-.slotbtn b{font-size:.9rem;font-weight:600}
-.slotbtn span{font-size:.78rem;color:var(--ink-soft)}
+.slotbtn b{font-size:1rem;font-weight:700}
+.slotbtn span{font-size:.88rem;color:var(--ink-soft)}
 .slotbtn em{
-  font-style:normal;font-size:.72rem;font-weight:600;color:var(--danger);
+  font-style:normal;font-size:.82rem;font-weight:700;color:var(--danger);
   max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
 }
 .slotbtn.on{border-color:var(--primary);background:var(--primary-soft);border-width:2px}
@@ -186,10 +192,10 @@ button{background:none;border:none;cursor:pointer}
 
 /* ---------- generic ---------- */
 .empty{padding:56px 28px;text-align:center;color:var(--ink-soft)}
-.empty strong{display:block;color:var(--ink);font-size:1.05rem;margin-bottom:6px;font-weight:600}
+.empty strong{display:block;color:var(--ink);font-size:1.15rem;margin-bottom:6px;font-weight:700}
 .page{padding:16px}
-.page h2{font-size:1.15rem;font-weight:600;margin-bottom:4px}
-.page .hint{font-size:.85rem;color:var(--ink-soft);margin-bottom:16px;max-width:60ch}
+.page h2{font-size:1.25rem;font-weight:700;margin-bottom:4px}
+.page .hint{font-size:.92rem;color:var(--ink-soft);margin-bottom:16px;max-width:60ch}
 .search{
   width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;
   background:var(--surface);margin-bottom:12px
@@ -198,8 +204,8 @@ button{background:none;border:none;cursor:pointer}
   display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)
 }
 .clientrow .who{flex:1;min-width:0}
-.clientrow .who b{font-weight:600;display:block}
-.clientrow .who span{font-size:.82rem;color:var(--ink-soft)}
+.clientrow .who b{font-weight:700;display:block}
+.clientrow .who span{font-size:.9rem;color:var(--ink-soft)}
 .mini{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);flex:none}
 .mini.wa{border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
 
@@ -207,14 +213,23 @@ button{background:none;border:none;cursor:pointer}
 .card.risk{border-color:var(--warn);background:var(--warn-soft)}
 .card.risk h3{color:#7A5304}
 .card.risk p{color:#7A5304}
-.card h3{font-size:.95rem;font-weight:600;margin-bottom:6px}
-.card p{font-size:.85rem;color:var(--ink-soft);margin-bottom:12px}
+.card h3{font-size:1.05rem;font-weight:700;margin-bottom:6px}
+.card p{font-size:.92rem;color:var(--ink-soft);margin-bottom:12px}
 .btn{
   width:100%;padding:13px;border-radius:10px;background:var(--primary);color:#fff;
-  font-weight:600;font-size:.95rem
+  font-weight:700;font-size:1.05rem
 }
 .btn.ghost{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
 .btn.danger{background:var(--danger-soft);color:var(--danger)}
+.sizes{display:flex;gap:8px}
+.sizebtn{
+  flex:1;padding:12px 6px;border:1px solid var(--line);border-radius:10px;
+  background:var(--surface);color:var(--ink-soft);font-weight:600
+}
+.sizebtn:nth-child(1){font-size:.95rem}
+.sizebtn:nth-child(2){font-size:1.1rem}
+.sizebtn:nth-child(3){font-size:1.25rem}
+.sizebtn.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:700}
 .btn:active{filter:brightness(.94)}
 .btn+.btn{margin-top:8px}
 
@@ -224,8 +239,8 @@ nav{
   background:var(--surface);border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom)
 }
-nav button{flex:1;padding:10px 4px 12px;font-size:.7rem;color:var(--ink-soft);font-weight:500}
-nav button b{display:block;font-size:1.25rem;font-weight:400;line-height:1.2}
+nav button{flex:1;padding:10px 4px 12px;font-size:.8rem;color:var(--ink-soft);font-weight:600}
+nav button b{display:block;font-size:1.35rem;font-weight:400;line-height:1.2}
 nav button[aria-current="page"]{color:var(--primary);font-weight:600}
 .fab{
   position:fixed;inset-inline-end:18px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:31;
@@ -244,8 +259,8 @@ nav button[aria-current="page"]{color:var(--primary);font-weight:600}
 }
 .sheet.open{transform:translateY(0)}
 .grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:6px auto 14px}
-.sheet h2{font-size:1.15rem;font-weight:600;margin-bottom:16px}
-label{display:block;font-size:.8rem;font-weight:600;color:var(--ink-soft);margin:0 0 6px}
+.sheet h2{font-size:1.25rem;font-weight:700;margin-bottom:16px}
+label{display:block;font-size:.88rem;font-weight:700;color:var(--ink-soft);margin:0 0 6px}
 .field{margin-bottom:14px}
 .field input,.field select,.field textarea{
   width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:10px;background:var(--surface)
@@ -256,15 +271,15 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--ink-soft);margin
 .row>*{flex:1}
 .phonewrap{display:flex;gap:8px}
 .phonewrap select{flex:none;width:112px}
-.err{color:var(--danger);font-size:.8rem;margin-top:6px;font-weight:500}
-.warnbox{background:var(--warn-soft);color:#7A5304;padding:11px 13px;border-radius:10px;font-size:.85rem;margin-bottom:14px;font-weight:500}
+.err{color:var(--danger);font-size:.9rem;margin-top:6px;font-weight:600}
+.warnbox{background:var(--warn-soft);color:#7A5304;padding:11px 13px;border-radius:10px;font-size:.92rem;margin-bottom:14px;font-weight:600}
 .toast{
   position:fixed;bottom:calc(96px + env(safe-area-inset-bottom));inset-inline:24px;z-index:60;
-  background:var(--ink);color:#fff;padding:12px 16px;border-radius:10px;font-size:.88rem;
+  background:var(--ink);color:#fff;padding:13px 16px;border-radius:10px;font-size:.95rem;
   text-align:center;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none
 }
 .toast.show{opacity:1;transform:translateY(0)}
-.notice{background:var(--warn-soft);color:#7A5304;padding:10px 16px;font-size:.82rem;font-weight:500}
+.notice{background:var(--warn-soft);color:#7A5304;padding:11px 16px;font-size:.9rem;font-weight:600}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 /* ---------- desktop: cap the column and centre it ----------
@@ -382,6 +397,9 @@ const T = {
     memoryWarn:"Storage is blocked here, so nothing will be saved. Open the app from your own server or home screen.",
     noPhone:"No phone number",
     dur:"{n} min",
+    textSizeH:"Text size",
+    textSizeP:"Makes every screen in the app bigger.",
+    sizeNormal:"Normal", sizeLarge:"Large", sizeXL:"Largest",
     protectH:"Storage protection",
     protectYes:"Granted. The browser has marked this data as persistent and will not clear it to free up space.",
     protectNo:"Not granted. The browser may clear this data on its own. Keep the app on your home screen and export often.",
@@ -461,6 +479,9 @@ const T = {
     memoryWarn:"التخزين محظور هنا، لن يتم حفظ أي شيء. افتح التطبيق من خادمك أو من الشاشة الرئيسية.",
     noPhone:"لا يوجد رقم",
     dur:"{n} دقيقة",
+    textSizeH:"حجم الخط",
+    textSizeP:"يكبّر جميع شاشات التطبيق.",
+    sizeNormal:"عادي", sizeLarge:"كبير", sizeXL:"الأكبر",
     protectH:"حماية التخزين",
     protectYes:"مفعّلة. المتصفح حدّد هذه البيانات كدائمة ولن يمسحها لتوفير مساحة.",
     protectNo:"غير مفعّلة. قد يمسح المتصفح البيانات من تلقاء نفسه. أبقِ التطبيق على الشاشة الرئيسية وصدّر نسخة بانتظام.",
@@ -549,6 +570,7 @@ async function requestPersistence(){
 let view = "day";
 let cursor = startOfDay(new Date());
 let clientQuery = "";
+let textScale = "";                        /* "" | "l" | "xl" */
 let upcomingMode = "next";                 /* "next" | "month" */
 let monthCursor = startOfMonth(new Date());
 
@@ -714,6 +736,8 @@ const main = $("#main");
 function render(){
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+  if(textScale) document.documentElement.dataset.scale = textScale;
+  else delete document.documentElement.dataset.scale;
   $("#langBtn").textContent = lang === "ar" ? "EN" : "ع";
   document.querySelectorAll("[data-t]").forEach(el => el.textContent = t(el.dataset.t));
   document.querySelectorAll("nav button").forEach(b =>
@@ -730,7 +754,7 @@ function render(){
     tag.hidden = !isToday(cursor);
     tag.textContent = t("todayBadge");
     const hij = fmtHijri(cursor);
-    $("#daySub").textContent = fmtDaySub(cursor) + (hij ? " · " + hij : "");
+    $("#daySub").innerHTML = esc(fmtDaySub(cursor)) + (hij ? `<i>${esc(hij)}</i>` : "");
   }
   /* The same arrows step days in the day view and months in month mode. */
   const arrowsOff = view === "clients" || view === "backup" ||
@@ -911,6 +935,13 @@ function renderBackup(){
     </div>` : isStandalone() ? `<div class="card">
       <h3>${t("homescreenH")}</h3><p>${t("homescreenOK")}</p>
     </div>` : ""}
+    <div class="card">
+      <h3>${t("textSizeH")}</h3><p>${t("textSizeP")}</p>
+      <div class="sizes">
+        ${[["","sizeNormal"],["l","sizeLarge"],["xl","sizeXL"]].map(([v,k]) =>
+          `<button class="sizebtn ${textScale===v?"on":""}" data-size="${v}">${t(k)}</button>`).join("")}
+      </div>
+    </div>
     <div class="card ${persistState === "no" ? "risk" : ""}">
       <h3>${t("protectH")}</h3>
       <p>${t(persistState === "yes" ? "protectYes" : persistState === "no" ? "protectNo" : "protectUnknown")}</p>
@@ -1251,8 +1282,13 @@ document.addEventListener("click", e => {
   /* An agenda row is itself tappable, and holds a WhatsApp link. Without this
      the link would fire AND the row would open the edit sheet behind it. */
   if(e.target.closest("a")) return;
-  const el = e.target.closest("[data-mode],[data-editres],[data-editclient],[data-close],#doExport,#doImport,#doReset");
+  const el = e.target.closest("[data-size],[data-mode],[data-editres],[data-editclient],[data-close],#doExport,#doImport,#doReset");
   if(!el) return;
+  if(el.dataset.size !== undefined){
+    textScale = el.dataset.size;
+    dbPut("prefs", {k:"textScale", v:textScale});
+    return render();
+  }
   if(el.dataset.mode !== undefined){
     upcomingMode = el.dataset.mode;
     if(upcomingMode === "month") monthCursor = startOfMonth(new Date());
@@ -1296,6 +1332,8 @@ document.addEventListener("input", e => {
     if(saved) lang = saved.v;
     const lb = prefs.find(p => p.k === "lastBackupAt");
     if(lb) lastBackupAt = lb.v;
+    const ts = prefs.find(p => p.k === "textScale");
+    if(ts) textScale = ts.v;
   }
   if(memoryOnly){
     const n = $("#storagenotice");
