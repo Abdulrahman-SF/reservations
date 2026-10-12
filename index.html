@@ -232,6 +232,14 @@ button{background:none;border:none;cursor:pointer}
 .sizebtn.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:700}
 .btn:active{filter:brightness(.94)}
 .btn+.btn{margin-top:8px}
+.btn[disabled]{opacity:.5}
+/* Only appears when the calendar is out of date, so it is never background noise. */
+.calbar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin:10px 16px 2px;padding:11px 13px;border-radius:10px;
+  background:var(--warn-soft);color:#7A5304
+}
+.calbar span{flex:1;min-width:11rem;font-size:.92rem;font-weight:600}
 
 /* ---------- bottom nav + fab ---------- */
 nav{
@@ -393,6 +401,19 @@ const T = {
     importBad:"That file isn't a valid backup.",
     exported:"Backup file saved",
     erased:"All data erased",
+    calH:"Morning reminder",
+    calP:"Adds the next 14 days to your phone's Calendar. Each day with bookings gets a 6:00 am reminder listing who is coming and when.",
+    calBtn:"Add to Calendar",
+    calUpdate:"Update Calendar",
+    calFresh:"Calendar is up to date.",
+    calStale:"Bookings have changed since you last did this.",
+    calNever:"Not added yet.",
+    calEmpty:"Nothing booked in the next 14 days.",
+    calDone:"{n} days sent to Calendar",
+    calTitle:"{n} bookings today",
+    calTitle1:"1 booking today",
+    calTitle2:"2 bookings today",
+    calBanner:"Your Calendar reminders are out of date.",
     nClients:"{n} clients", nRes:"{n} reservations",
     memoryWarn:"Storage is blocked here, so nothing will be saved. Open the app from your own server or home screen.",
     noPhone:"No phone number",
@@ -475,6 +496,19 @@ const T = {
     importBad:"هذا الملف غير صالح.",
     exported:"تم حفظ ملف النسخة الاحتياطية",
     erased:"تم مسح جميع البيانات",
+    calH:"تذكير الصباح",
+    calP:"يضيف الأيام الـ ١٤ القادمة إلى تقويم الجوال. كل يوم فيه حجوزات يصلك عنه تنبيه الساعة ٦:٠٠ صباحًا يوضّح من سيأتي ومتى.",
+    calBtn:"إضافة إلى التقويم",
+    calUpdate:"تحديث التقويم",
+    calFresh:"التقويم محدّث.",
+    calStale:"تغيّرت الحجوزات منذ آخر إضافة.",
+    calNever:"لم تتم الإضافة بعد.",
+    calEmpty:"لا توجد حجوزات خلال ١٤ يومًا القادمة.",
+    calDone:"تم إرسال {n} يوم إلى التقويم",
+    calTitle:"{n} حجوزات اليوم",
+    calTitle1:"حجز واحد اليوم",
+    calTitle2:"حجزان اليوم",
+    calBanner:"تنبيهات التقويم لديك غير محدّثة.",
     nClients:"{n} عميل", nRes:"{n} حجز",
     memoryWarn:"التخزين محظور هنا، لن يتم حفظ أي شيء. افتح التطبيق من خادمك أو من الشاشة الرئيسية.",
     noPhone:"لا يوجد رقم",
@@ -545,6 +579,7 @@ const dbWipe = s      => tx(s,"readwrite", st => st.clear());
    ============================================================ */
 let clients = [], reservations = [];
 let persistState = "unknown", lastBackupAt = 0;
+let calExportedSig = "", calSeq = 0;
 const isStandalone = () =>
   window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 const isIOS = () =>
@@ -842,6 +877,15 @@ function modeToggle(){
   </div>`;
 }
 
+/* Only shown when action is needed, so it is never background noise. */
+function calendarBanner(){
+  if(!calendarStale()) return "";
+  return `<div class="calbar">
+    <span>${t("calBanner")}</span>
+    <button class="chip" id="doCal2">${calExportedSig ? t("calUpdate") : t("calBtn")}</button>
+  </div>`;
+}
+
 /* Everything in the chosen month — past and future, every status, cancelled
    included but dimmed, so a cancellation leaves a visible trace. */
 function renderMonth(){
@@ -874,10 +918,10 @@ function renderUpcoming(){
     .sort((a,b) => a.start - b.start);
 
   if(!list.length)
-    return modeToggle() +
+    return modeToggle() + calendarBanner() +
       `<div class="empty"><strong>${t("emptyUpcomingTitle")}</strong>${t("emptyUpcomingBody")}</div>`;
 
-  let html = modeToggle() + `<div class="agenda">`, bucket = null, dayKey = null;
+  let html = modeToggle() + calendarBanner() + `<div class="agenda">`, bucket = null, dayKey = null;
   for(const r of list){
     const b = upcomingBucket(r.start);
     if(b !== bucket){ bucket = b; dayKey = null; html += `<h2 class="bucket">${t(b)}</h2>`; }
@@ -926,10 +970,25 @@ function renderClients(){
   </div>`;
 }
 
+function calendarCard(){
+  const days = calendarDays().length;
+  const state = !days ? t("calEmpty")
+              : !calExportedSig ? t("calNever")
+              : calendarStale() ? t("calStale") : t("calFresh");
+  return `<div class="card ${calendarStale() ? "risk" : ""}">
+    <h3>${t("calH")}</h3>
+    <p>${t("calP")}<br>${state}</p>
+    <button class="btn ${days ? "" : "ghost"}" id="doCal" ${days ? "" : "disabled"}>
+      ${calExportedSig ? t("calUpdate") : t("calBtn")}
+    </button>
+  </div>`;
+}
+
 function renderBackup(){
   return `<div class="page">
     <h2>${t("backupTitle")}</h2>
     <p class="hint">${t("backupHint")}</p>
+    ${calendarCard()}
     ${(!isStandalone() && isIOS()) ? `<div class="card risk">
       <h3>${t("homescreenH")}</h3><p>${t("homescreenIOS")}</p>
     </div>` : isStandalone() ? `<div class="card">
@@ -1219,6 +1278,138 @@ function resSheet(id){
 /* ============================================================
    9. EXPORT / IMPORT
    ============================================================ */
+/* ============================================================
+   9a. CALENDAR (.ics)
+   One summary event per day, firing at 06:00, for the next 14 days.
+   Written by hand because the format is strict: CRLF line endings,
+   lines folded at 75 octets, and a stable UID so re-adding updates
+   the existing event instead of creating a duplicate.
+   ============================================================ */
+const CAL_DAYS = 14, CAL_HOUR = 6;
+
+const icsEsc = s => String(s || "")
+  .replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+
+/* Folding is counted in octets, not characters — Arabic is multi-byte, so
+   splitting by character length would produce lines a reader rejects. */
+function icsFold(line){
+  const enc = new TextEncoder();
+  if(enc.encode(line).length <= 75) return line;
+  const out = [];
+  let cur = "", curLen = 0, limit = 75;
+  for(const ch of line){
+    const n = enc.encode(ch).length;
+    if(curLen + n > limit){ out.push(cur); cur = " " + ch; curLen = 1 + n; limit = 75; }
+    else { cur += ch; curLen += n; }
+  }
+  out.push(cur);
+  return out.join("\r\n");
+}
+const pad2 = n => String(n).padStart(2, "0");
+const icsLocal = d =>
+  `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
+const icsUtc = d =>
+  `${d.getUTCFullYear()}${pad2(d.getUTCMonth()+1)}${pad2(d.getUTCDate())}T${pad2(d.getUTCHours())}${pad2(d.getUTCMinutes())}${pad2(d.getUTCSeconds())}Z`;
+
+/* The days in range that have at least one live booking, each with its list. */
+function calendarDays(){
+  const from = startOfDay(new Date()).getTime();
+  const to = from + CAL_DAYS * 86400000;
+  const byDay = new Map();
+  reservations
+    .filter(r => r.start >= from && r.start < to && r.status !== "cancelled")
+    .sort((a,b) => a.start - b.start)
+    .forEach(r => {
+      const k = startOfDay(new Date(r.start)).getTime();
+      if(!byDay.has(k)) byDay.set(k, []);
+      byDay.get(k).push(r);
+    });
+  return [...byDay.entries()].sort((a,b) => a[0] - b[0]);
+}
+
+/* A fingerprint of what is currently in range. Comparing it to the one saved
+   at the last export catches edits AND deletions, which a timestamp alone
+   would miss. */
+function calendarSignature(){
+  const s = calendarDays()
+    .map(([k, list]) => k + ":" + list.map(r => r.id + "," + r.start + "," + r.clientId).join("|"))
+    .join(";");
+  let h = 5381;
+  for(let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return s.length + "." + (h >>> 0).toString(36);
+}
+const calendarStale = () => calendarDays().length > 0 && calExportedSig !== calendarSignature();
+
+function buildIcs(){
+  const days = calendarDays();
+  if(!days.length) return null;
+  const stamp = icsUtc(new Date());
+  const seq = calSeq + 1;
+  const lines = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//reservations//app//EN",
+    "CALSCALE:GREGORIAN", "METHOD:PUBLISH"
+  ];
+  for(const [k, list] of days){
+    const d = new Date(k);
+    const at = new Date(k); at.setHours(CAL_HOUR, 0, 0, 0);
+    const end = new Date(at.getTime() + 15 * 60000);
+    /* Arabic has a dual form, so 2 is not "٢ حجوزات" but "حجزان". Days cap
+       at four bookings, so only 1 and 2 need their own wording. */
+    const title = list.length === 1 ? t("calTitle1")
+                : list.length === 2 ? t("calTitle2")
+                : t("calTitle", {n:list.length});
+    const body = list.map(r => {
+      const c = byId(r.clientId) || {name:"—"};
+      return [fmtTime(r.start), c.name, r.service].filter(Boolean).join(" — ");
+    }).join("\n");
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:resday-${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}@reservations.app`,
+      `DTSTAMP:${stamp}`,
+      `SEQUENCE:${seq}`,
+      /* Floating local time: 06:00 wherever the phone is, no timezone table. */
+      `DTSTART:${icsLocal(at)}`,
+      `DTEND:${icsLocal(end)}`,
+      icsFold(`SUMMARY:${icsEsc(title)}`),
+      icsFold(`DESCRIPTION:${icsEsc(body)}`),
+      "BEGIN:VALARM", "ACTION:DISPLAY", "TRIGGER:PT0S",
+      icsFold(`DESCRIPTION:${icsEsc(title)}`), "END:VALARM",
+      "END:VEVENT"
+    );
+  }
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n") + "\r\n";
+}
+
+async function exportCalendar(){
+  const ics = buildIcs();
+  if(!ics) return toast(t("calEmpty"));
+  const n = calendarDays().length;
+  const file = new File([ics], "reservations.ics", {type:"text/calendar"});
+  let ok = false;
+  /* iOS cannot open a downloaded .ics straight into Calendar, but the share
+     sheet can. Fall back to a download where sharing files is unsupported. */
+  try{
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:t("calH")});
+      ok = true;
+    }
+  }catch(e){ if(e && e.name === "AbortError") return; }
+  if(!ok){
+    const url = URL.createObjectURL(new Blob([ics], {type:"text/calendar;charset=utf-8"}));
+    const a = document.createElement("a");
+    a.href = url; a.download = "reservations.ics";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+  calSeq += 1;
+  calExportedSig = calendarSignature();
+  await dbPut("prefs", {k:"calSeq", v:calSeq});
+  await dbPut("prefs", {k:"calExportedSig", v:calExportedSig});
+  render();
+  toast(t("calDone", {n}));
+}
+
 function exportData(){
   const payload = {app:"reservations", version:1, exportedAt:new Date().toISOString(), clients, reservations};
   const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"}));
@@ -1282,8 +1473,9 @@ document.addEventListener("click", e => {
   /* An agenda row is itself tappable, and holds a WhatsApp link. Without this
      the link would fire AND the row would open the edit sheet behind it. */
   if(e.target.closest("a")) return;
-  const el = e.target.closest("[data-size],[data-mode],[data-editres],[data-editclient],[data-close],#doExport,#doImport,#doReset");
+  const el = e.target.closest("[data-size],[data-mode],[data-editres],[data-editclient],[data-close],#doCal,#doCal2,#doExport,#doImport,#doReset");
   if(!el) return;
+  if(el.id === "doCal" || el.id === "doCal2"){ exportCalendar(); return; }
   if(el.dataset.size !== undefined){
     textScale = el.dataset.size;
     dbPut("prefs", {k:"textScale", v:textScale});
@@ -1334,6 +1526,10 @@ document.addEventListener("input", e => {
     if(lb) lastBackupAt = lb.v;
     const ts = prefs.find(p => p.k === "textScale");
     if(ts) textScale = ts.v;
+    const cs = prefs.find(p => p.k === "calExportedSig");
+    if(cs) calExportedSig = cs.v;
+    const cq = prefs.find(p => p.k === "calSeq");
+    if(cq) calSeq = cq.v;
   }
   if(memoryOnly){
     const n = $("#storagenotice");

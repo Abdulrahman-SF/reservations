@@ -59,6 +59,53 @@ service worker registers normally there.
 That last row is the one people forget. If you change the app and your phone
 still shows the old version, you didn't bump the cache name.
 
+## Changes in v9
+
+**Morning reminder via the phone's Calendar.**
+
+A button adds the next **14 days** to the phone's calendar as one summary event
+per day that has bookings:
+
+- Fires at **6:00 am** on the day itself
+- Title shows the count — `حجز واحد اليوم` / `حجزان اليوم` / `٣ حجوزات اليوم`
+  (Arabic has a dual form, so 2 is not "٢ حجوزات")
+- Details list each booking: time — client — service
+- Cancelled bookings are left out; empty days produce no event
+
+Two places to tap it: a card in the Backup tab, and an amber banner at the top
+of the Upcoming tab that appears **only** when bookings have changed since the
+last export.
+
+### Why a calendar event and not a push notification
+
+A web push needs a server to send it, and that server would have no idea what
+the bookings are — they live only on the phone. The Calendar app already does
+this job, for free, offline, and with no permissions to grant.
+
+### Implementation notes
+
+- The `.ics` is written by hand because the format is unforgiving: CRLF line
+  endings, lines folded at **75 octets** (counted in bytes, not characters —
+  Arabic is multi-byte and folding by character length produces a file readers
+  reject), and `\` `;` `,` and newlines escaped.
+- `DTSTART` is floating local time, so 6:00 am means 6:00 am wherever the phone
+  is, with no timezone table in the file.
+- Each day's `UID` is `resday-YYYYMMDD@reservations.app` and `SEQUENCE`
+  increments every export, so re-adding **updates** the existing events rather
+  than creating duplicates.
+- Staleness is detected by fingerprinting the bookings in range, which catches
+  deletions — a timestamp alone would not.
+- Delivery uses the Web Share sheet when the browser supports sharing files
+  (the route that reaches Calendar on iOS) and falls back to a download.
+
+Verified against the independent `node-ical` parser, not just self-checks.
+
+### Needs testing on the real iPhone
+
+The share-sheet path cannot be tested here. If tapping the button does not
+offer "Calendar" on his phone, say so and I will change how the file is handed
+over.
+
 ## Changes in v8
 
 Readability pass, from the first real user's feedback: text too small and too
